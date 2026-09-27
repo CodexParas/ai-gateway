@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.codexparas.ai_gateway.route.GatewayRoute;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import tools.jackson.databind.ObjectMapper;
 
 class RequestTransformerTest {
@@ -53,5 +54,25 @@ class RequestTransformerTest {
 
     var options = (org.springframework.ai.openai.OpenAiChatOptions) result.chatOptions();
     assertThat(options.getResponseFormat().getType().name()).isEqualTo("JSON_OBJECT");
+  }
+
+  @Test
+  void forwardsToolSchemasWithoutExecutableGatewayCode() throws Exception {
+    OpenAiRequestTransformer transformer = new OpenAiRequestTransformer();
+    var body =
+        new ObjectMapper()
+            .readTree(
+                "{\"messages\":[{\"role\":\"user\",\"content\":\"weather\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"weather\",\"description\":\"Get weather\",\"parameters\":{\"type\":\"object\"}}}]} ");
+
+    TransformedChatRequest result =
+        transformer.transform(new GatewayRoute("OPENAI", "chat.completions", false), body);
+
+    var options = (ToolCallingChatOptions) result.chatOptions();
+    assertThat(options.getToolCallbacks()).hasSize(1);
+    assertThat(options.getToolCallbacks().getFirst().getToolDefinition().name())
+        .isEqualTo("weather");
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> options.getToolCallbacks().getFirst().call("{}"))
+        .isInstanceOf(UnsupportedOperationException.class);
   }
 }

@@ -5,6 +5,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.ai.anthropic.AnthropicChatOptions;
+import org.springframework.ai.bedrock.converse.BedrockChatOptions;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -12,6 +14,8 @@ import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.google.genai.GoogleGenAiChatOptions;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.util.MimeTypeUtils;
@@ -129,11 +133,7 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
   }
 
   private ChatOptions options(JsonNode body) {
-    boolean providerSpecificFormat =
-        (provider().equalsIgnoreCase("OPENAI") || provider().equalsIgnoreCase("AZURE"))
-            && body.path("response_format").isObject();
-    ChatOptions.Builder<?> builder =
-        providerSpecificFormat ? OpenAiChatOptions.builder() : ChatOptions.builder();
+    ChatOptions.Builder<?> builder = providerBuilder(body);
     setDouble(builder, "temperature", body.get("temperature"));
     setDouble(builder, "topP", first(body, "top_p", "topP"));
     setDouble(builder, "frequencyPenalty", body.get("frequency_penalty"));
@@ -141,6 +141,7 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
     setInteger(builder, "maxTokens", first(body, "max_tokens", "max_completion_tokens"));
     setInteger(builder, "topK", body.get("top_k"));
     setResponseFormat(builder, body.get("response_format"));
+    setTools(builder, body);
     JsonNode stop = first(body, "stop", "stop_sequences");
     if (stop != null) {
       if (stop.isTextual()) builder.stopSequences(List.of(stop.asString()));
@@ -154,6 +155,68 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
       }
     }
     return builder.build();
+  }
+
+  private ChatOptions.Builder<?> providerBuilder(JsonNode body) {
+    boolean hasTools = hasTools(body);
+    boolean openAi = provider().equalsIgnoreCase("OPENAI") || provider().equalsIgnoreCase("AZURE");
+    if (openAi && (body.path("response_format").isObject() || hasTools)) {
+      return OpenAiChatOptions.builder();
+    }
+    if (provider().equalsIgnoreCase("ANTHROPIC") && hasTools) {
+      return AnthropicChatOptions.builder();
+    }
+    if (provider().equalsIgnoreCase("GOOGLE") && hasTools) {
+      return GoogleGenAiChatOptions.builder();
+    }
+    if (provider().equalsIgnoreCase("BEDROCK") && hasTools) {
+      return BedrockChatOptions.builder();
+    }
+    return ChatOptions.builder();
+  }
+
+  private static boolean hasTools(JsonNode body) {
+    return body.path("tools").isArray() || body.path("toolConfig").isObject();
+  }
+
+  private static void setTools(ChatOptions.Builder<?> builder, JsonNode body) {
+    if (!(builder instanceof ToolCallingChatOptions.Builder<?> toolBuilder)) return;
+    List<org.springframework.ai.tool.ToolCallback> callbacks = new ArrayList<>();
+    JsonNode tools = body.get("tools");
+    if (tools != null && tools.isArray()) {
+      tools.forEach(tool -> addTool(callbacks, tool));
+    }
+    JsonNode toolConfig = body.path("toolConfig").path("tools");
+    if (toolConfig.isArray()) {
+      toolConfig.forEach(tool -> addTool(callbacks, tool.path("toolSpec")));
+    }
+    if (!callbacks.isEmpty()) toolBuilder.toolCallbacks(callbacks);
+  }
+
+  private static void addTool(
+      List<org.springframework.ai.tool.ToolCallback> callbacks, JsonNode tool) {
+    JsonNode function = tool.path("function").isObject() ? tool.path("function") : tool;
+    JsonNode toolSpec = tool.path("toolSpec").isObject() ? tool.path("toolSpec") : function;
+    JsonNode declarations = tool.path("function_declarations");
+    if (declarations.isArray()) {
+      declarations.forEach(declaration -> addTool(callbacks, declaration));
+      return;
+    }
+    String name = firstText(toolSpec, "name");
+    if (name == null) return;
+    String description = firstText(toolSpec, "description");
+    JsonNode schema = toolSpec.get("parameters");
+    if (schema == null) schema = toolSpec.get("input_schema");
+    if (schema == null) schema = toolSpec.path("inputSchema").get("json");
+    callbacks.add(
+        new GatewayToolCallback(name, description, schema == null ? "{}" : schema.toString()));
+  }
+
+  private static String firstText(JsonNode node, String field) {
+    JsonNode value = node.get(field);
+    return value != null && value.isTextual() && !value.asString().isBlank()
+        ? value.asString()
+        : null;
   }
 
   private static void setResponseFormat(ChatOptions.Builder<?> builder, JsonNode value) {
