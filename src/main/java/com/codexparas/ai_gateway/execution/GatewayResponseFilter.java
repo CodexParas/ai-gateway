@@ -1,0 +1,172 @@
+package com.codexparas.ai_gateway.execution;
+
+import com.codexparas.ai_gateway.filters.GatewayRequestAttributes;
+import com.codexparas.ai_gateway.route.GatewayRoute;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+import tools.jackson.databind.ObjectMapper;
+
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 60)
+public class GatewayResponseFilter extends OncePerRequestFilter {
+  private final ObjectMapper objectMapper;
+  private final Map<String, ResponseTransformer> responseTransformers;
+  private final Map<String, StreamingResponseTransformer> streamingTransformers;
+
+  public GatewayResponseFilter(
+      ObjectMapper objectMapper,
+      List<ResponseTransformer> responseTransformers,
+      List<StreamingResponseTransformer> streamingTransformers) {
+    this.objectMapper = objectMapper;
+    this.responseTransformers = index(responseTransformers);
+    this.streamingTransformers = index(streamingTransformers);
+  }
+
+  @Override
+  protected void doFilterInternal(
+      @NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response,
+      @NonNull FilterChain chain)
+      throws ServletException, IOException {
+    GatewayRoute route = (GatewayRoute) request.getAttribute(GatewayRequestAttributes.ROUTE);
+    if (route == null) {
+      chain.doFilter(request, response);
+      return;
+    }
+
+    @SuppressWarnings("unchecked")
+    Flux<ChatResponse> stream =
+        (Flux<ChatResponse>) request.getAttribute(GatewayRequestAttributes.CHAT_RESPONSE_STREAM);
+    if (stream != null) {
+      writeStream(request, response, route, stream);
+      return;
+    }
+
+    ChatResponse chatResponse =
+        (ChatResponse) request.getAttribute(GatewayRequestAttributes.CHAT_RESPONSE);
+    if (chatResponse == null) {
+      chain.doFilter(request, response);
+      return;
+    }
+
+    ResponseTransformer transformer =
+        responseTransformers.get(route.provider().toUpperCase(Locale.ROOT));
+    if (transformer == null || !transformer.supports(route)) {
+      writeError(
+          response, "response_transformer_not_found", "No response transformer is configured");
+      return;
+    }
+    ProviderResponse providerResponse = transformer.transform(route, chatResponse);
+    response.setStatus(HttpServletResponse.SC_OK);
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    objectMapper.writeValue(response.getWriter(), providerResponse.body());
+  }
+
+  private void writeStream(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      GatewayRoute route,
+      Flux<ChatResponse> stream)
+      throws IOException {
+    StreamingResponseTransformer transformer =
+        streamingTransformers.get(route.provider().toUpperCase(Locale.ROOT));
+    if (transformer == null || !transformer.supports(route)) {
+      writeError(
+          response, "streaming_transformer_not_found", "No streaming transformer is configured");
+      return;
+    }
+
+    response.setStatus(HttpServletResponse.SC_OK);
+    response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
+    response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+    response.setHeader("Cache-Control", "no-cache");
+    response.setHeader("X-Accel-Buffering", "no");
+
+    AsyncContext asyncContext =
+        request.isAsyncStarted() ? request.getAsyncContext() : request.startAsync();
+    PrintWriter writer = response.getWriter();
+    Disposable subscription =
+        stream.subscribe(
+            chunk -> writeChunk(writer, transformer.transformChunk(route, chunk)),
+            error -> completeWithError(asyncContext, writer, error),
+            () -> completeStream(route, asyncContext, writer));
+    request.setAttribute(
+        GatewayRequestAttributes.CHAT_RESPONSE_STREAM + ".subscription", subscription);
+  }
+
+  private void writeChunk(PrintWriter writer, ProviderResponse providerResponse) {
+    synchronized (writer) {
+      if (providerResponse.eventName() != null && !providerResponse.eventName().isBlank()) {
+        writer.write("event: " + providerResponse.eventName() + "\n");
+      }
+      writer.write("data: ");
+      objectMapper.writeValue(writer, providerResponse.body());
+      writer.write("\n\n");
+      writer.flush();
+    }
+  }
+
+  private void completeStream(GatewayRoute route, AsyncContext asyncContext, PrintWriter writer) {
+    synchronized (writer) {
+      if (route.provider().equalsIgnoreCase("OPENAI")
+          || route.provider().equalsIgnoreCase("AZURE")) {
+        writer.write("data: [DONE]\n\n");
+        writer.flush();
+      }
+    }
+    asyncContext.complete();
+  }
+
+  private void completeWithError(AsyncContext asyncContext, PrintWriter writer, Throwable error) {
+    synchronized (writer) {
+      if (!writer.checkError()) {
+        writer.write("event: error\n");
+        writer.write("data: {\"error\":\"stream_execution_failed\"}\n\n");
+        writer.flush();
+      }
+    }
+    asyncContext.complete();
+  }
+
+  private void writeError(HttpServletResponse response, String error, String message)
+      throws IOException {
+    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    objectMapper.writeValue(response.getWriter(), Map.of("error", error, "message", message));
+  }
+
+  private static <T> Map<String, T> index(List<T> transformers) {
+    return transformers.stream()
+        .collect(
+            Collectors.toUnmodifiableMap(
+                transformer -> provider(transformer).toUpperCase(Locale.ROOT),
+                Function.identity()));
+  }
+
+  private static String provider(Object transformer) {
+    if (transformer instanceof ResponseTransformer responseTransformer) {
+      return responseTransformer.provider();
+    }
+    return ((StreamingResponseTransformer) transformer).provider();
+  }
+}

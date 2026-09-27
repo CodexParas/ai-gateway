@@ -28,8 +28,8 @@ Legend:
 - [~] Spring AI request execution filter.
 - [~] Response transformation filter/service.
 - [ ] Response guardrail filter.
-- [ ] Provider-compatible response writer.
-- [ ] Streaming/SSE response writer.
+- [~] Provider-compatible response writer.
+- [~] Streaming/SSE response writer.
 - [x] Completion logging and Kafka publication.
 - [ ] Filter-level exception boundary.
 
@@ -167,15 +167,15 @@ ChatResponse / streamed ChatResponse
 
 ## 10. Provider-compatible response writing
 
-- [ ] Write non-streaming JSON responses.
-- [ ] Write provider-compatible response headers.
+- [x] Write non-streaming JSON responses.
+- [x] Write provider-compatible response headers.
 - [ ] Write provider request IDs.
-- [ ] Write provider-compatible SSE event names.
-- [ ] Emit stream completion events.
-- [ ] Emit sanitized stream error events.
-- [ ] Handle client disconnects.
+- [~] Write provider-compatible SSE event names.
+- [x] Emit stream completion events.
+- [~] Emit sanitized stream error events.
+- [~] Handle client disconnects.
 - [ ] Cancel upstream model execution on disconnect.
-- [ ] Ensure exactly one completion audit event per request.
+- [x] Ensure exactly one completion audit event per request.
 
 ## 11. Error handling
 
