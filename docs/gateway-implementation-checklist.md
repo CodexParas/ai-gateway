@@ -174,7 +174,7 @@ ChatResponse / streamed ChatResponse
 - [x] Emit stream completion events.
 - [~] Emit sanitized stream error events.
 - [~] Handle client disconnects.
-- [ ] Cancel upstream model execution on disconnect.
+- [x] Cancel upstream model execution on disconnect.
 - [x] Ensure exactly one completion audit event per request.
 
 ## 11. Error handling

@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -119,6 +120,9 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     asyncContext.setTimeout(streamingProperties.timeout().toMillis());
     PrintWriter writer = response.getWriter();
     AtomicReference<Disposable> subscriptionReference = new AtomicReference<>();
+    AtomicBoolean terminated = new AtomicBoolean();
+    asyncContext.addListener(
+        new StreamLifecycleListener(request, subscriptionReference, terminated));
     Disposable subscription =
         stream.subscribe(
             chunk -> {
@@ -131,7 +135,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
             error -> completeWithError(request, route, asyncContext, writer, error),
             () -> completeStream(route, asyncContext, writer));
     subscriptionReference.set(subscription);
-    asyncContext.addListener(new StreamLifecycleListener(request, subscriptionReference));
+    if (terminated.get()) subscription.dispose();
     request.setAttribute(
         GatewayRequestAttributes.CHAT_RESPONSE_STREAM + ".subscription", subscription);
   }
@@ -254,15 +258,20 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
   private static final class StreamLifecycleListener implements AsyncListener {
     private final HttpServletRequest request;
     private final AtomicReference<Disposable> subscription;
+    private final AtomicBoolean terminated;
 
     private StreamLifecycleListener(
-        HttpServletRequest request, AtomicReference<Disposable> subscription) {
+        HttpServletRequest request,
+        AtomicReference<Disposable> subscription,
+        AtomicBoolean terminated) {
       this.request = request;
       this.subscription = subscription;
+      this.terminated = terminated;
     }
 
     @Override
     public void onComplete(AsyncEvent event) {
+      terminated.set(true);
       if (request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION) == null) {
         request.setAttribute(GatewayRequestAttributes.STREAM_TERMINATION, "COMPLETED");
       }
@@ -271,6 +280,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
 
     @Override
     public void onTimeout(AsyncEvent event) {
+      terminated.set(true);
       request.setAttribute(
           GatewayRequestAttributes.ERROR, new TimeoutException("stream timed out"));
       request.setAttribute(GatewayRequestAttributes.STREAM_TERMINATION, "TIMEOUT");
@@ -279,6 +289,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
 
     @Override
     public void onError(AsyncEvent event) {
+      terminated.set(true);
       request.setAttribute(GatewayRequestAttributes.ERROR, event.getThrowable());
       request.setAttribute(
           GatewayRequestAttributes.STREAM_TERMINATION,
