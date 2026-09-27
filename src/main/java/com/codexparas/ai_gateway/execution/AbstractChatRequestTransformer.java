@@ -12,6 +12,8 @@ import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.content.Media;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.util.MimeTypeUtils;
 import tools.jackson.databind.JsonNode;
 
@@ -126,8 +128,11 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
     return result.toString();
   }
 
-  private static ChatOptions options(JsonNode body) {
-    ChatOptions.Builder<?> builder = ChatOptions.builder();
+  private ChatOptions options(JsonNode body) {
+    ChatOptions.Builder<?> builder =
+        provider().equalsIgnoreCase("OPENAI") || provider().equalsIgnoreCase("AZURE")
+            ? OpenAiChatOptions.builder()
+            : ChatOptions.builder();
     setText(builder, "model", body.get("model"));
     setDouble(builder, "temperature", body.get("temperature"));
     setDouble(builder, "topP", first(body, "top_p", "topP"));
@@ -135,6 +140,7 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
     setDouble(builder, "presencePenalty", body.get("presence_penalty"));
     setInteger(builder, "maxTokens", first(body, "max_tokens", "max_completion_tokens"));
     setInteger(builder, "topK", body.get("top_k"));
+    setResponseFormat(builder, body.get("response_format"));
     JsonNode stop = first(body, "stop", "stop_sequences");
     if (stop != null) {
       if (stop.isTextual()) builder.stopSequences(List.of(stop.asString()));
@@ -148,6 +154,34 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
       }
     }
     return builder.build();
+  }
+
+  private static void setResponseFormat(ChatOptions.Builder<?> builder, JsonNode value) {
+    if (!(builder instanceof OpenAiChatOptions.Builder openAi)
+        || value == null
+        || !value.isObject()) {
+      return;
+    }
+    String type = value.path("type").asString();
+    if (type.equalsIgnoreCase("text")) {
+      openAi.responseFormat(
+          OpenAiChatModel.ResponseFormat.builder()
+              .type(OpenAiChatModel.ResponseFormat.Type.TEXT)
+              .build());
+    } else if (type.equalsIgnoreCase("json_object")) {
+      openAi.responseFormat(
+          OpenAiChatModel.ResponseFormat.builder()
+              .type(OpenAiChatModel.ResponseFormat.Type.JSON_OBJECT)
+              .build());
+    } else if (type.equalsIgnoreCase("json_schema")) {
+      JsonNode schema = value.path("json_schema").path("schema");
+      openAi.responseFormat(
+          OpenAiChatModel.ResponseFormat.builder()
+              .type(OpenAiChatModel.ResponseFormat.Type.JSON_SCHEMA)
+              .jsonSchema(schema.isMissingNode() ? "{}" : schema.toString())
+              .strict(value.path("json_schema").path("strict").asBoolean(false))
+              .build());
+    }
   }
 
   private static JsonNode first(JsonNode body, String first, String second) {

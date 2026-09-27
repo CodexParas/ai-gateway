@@ -104,7 +104,8 @@ Expected routes include:
 - [x] Transform incoming protocol messages into Spring AI `Message` objects.
 - [x] Transform incoming protocol options into Spring AI `ChatOptions`.
 - [x] Preserve system, user, assistant, tool, and supported multimodal content.
-- [~] Preserve temperature, max tokens, top-p, stop sequences, tools, and response format.
+- [x] Preserve temperature, max tokens, top-p, stop sequences, and response format.
+- [~] Preserve provider tool declarations; the gateway maps tool calls but does not execute caller callbacks.
 - [x] Add OpenAI request transformer.
 - [x] Add Anthropic request transformer.
 - [x] Add Bedrock request transformer.

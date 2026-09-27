@@ -39,4 +39,19 @@ class RequestTransformerTest {
     assertThat(result.chatOptions().getMaxTokens()).isEqualTo(100);
     assertThat(result.chatOptions().getStopSequences()).containsExactly("END");
   }
+
+  @Test
+  void preservesOpenAiJsonResponseFormat() throws Exception {
+    OpenAiRequestTransformer transformer = new OpenAiRequestTransformer();
+    var body =
+        new ObjectMapper()
+            .readTree(
+                "{\"model\":\"gpt-5\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"response_format\":{\"type\":\"json_object\"}}");
+
+    TransformedChatRequest result =
+        transformer.transform(new GatewayRoute("OPENAI", "chat.completions", false), body);
+
+    var options = (org.springframework.ai.openai.OpenAiChatOptions) result.chatOptions();
+    assertThat(options.getResponseFormat().getType().name()).isEqualTo("JSON_OBJECT");
+  }
 }
