@@ -13,6 +13,9 @@ That schema is intentionally limited to fields the runtime currently reads:
 provider selection, provider credentials, request defaults, fallback model,
 and guardrails.
 
+The implementation work for this future layer is tracked in
+`docs/ai-gateway-control-plane-checklist.md`.
+
 ## Future control-plane responsibility
 
 A broader control plane can own the lifecycle and governance of model
