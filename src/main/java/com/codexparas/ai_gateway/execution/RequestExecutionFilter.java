@@ -1,5 +1,6 @@
 package com.codexparas.ai_gateway.execution;
 
+import com.codexparas.ai_gateway.config.GatewayExecutionProperties;
 import com.codexparas.ai_gateway.filters.GatewayRequestAttributes;
 import com.codexparas.ai_gateway.model.PreparedChatModel;
 import com.codexparas.ai_gateway.route.GatewayRoute;
@@ -29,10 +30,15 @@ import tools.jackson.databind.node.ObjectNode;
 @Order(Ordered.HIGHEST_PRECEDENCE + 50)
 public class RequestExecutionFilter extends OncePerRequestFilter {
   private final ObjectMapper objectMapper;
+  private final GatewayExecutionProperties executionProperties;
   private final Map<String, RequestTransformer> transformers;
 
-  public RequestExecutionFilter(ObjectMapper objectMapper, List<RequestTransformer> transformers) {
+  public RequestExecutionFilter(
+      ObjectMapper objectMapper,
+      List<RequestTransformer> transformers,
+      GatewayExecutionProperties executionProperties) {
     this.objectMapper = objectMapper;
+    this.executionProperties = executionProperties;
     this.transformers =
         transformers.stream()
             .collect(
@@ -80,7 +86,7 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
         Flux<ChatResponse> stream = prepared.chatModel().stream(prompt);
         request.setAttribute(GatewayRequestAttributes.CHAT_RESPONSE_STREAM, stream);
       } else {
-        ChatResponse responseBody = prepared.chatModel().call(prompt);
+        ChatResponse responseBody = executeWithRetry(request, prepared, prompt);
         request.setAttribute(GatewayRequestAttributes.CHAT_RESPONSE, responseBody);
       }
       chain.doFilter(request, response);
@@ -90,6 +96,23 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
       request.setAttribute(GatewayRequestAttributes.ERROR, providerException);
       throw providerException;
     }
+  }
+
+  private ChatResponse executeWithRetry(
+      HttpServletRequest request, PreparedChatModel prepared, Prompt prompt) {
+    RuntimeException failure = null;
+    for (int attempt = 1; attempt <= executionProperties.maxAttempts(); attempt++) {
+      try {
+        request.setAttribute(GatewayRequestAttributes.RETRY_COUNT, attempt - 1);
+        return prepared.chatModel().call(prompt);
+      } catch (RuntimeException exception) {
+        failure = exception;
+        if (attempt == executionProperties.maxAttempts()) break;
+      }
+    }
+    throw failure == null
+        ? new IllegalStateException("Provider execution did not produce a response")
+        : failure;
   }
 
   private static JsonNode mergeConfiguredDefaults(

@@ -204,7 +204,7 @@ ChatResponse / streamed ChatResponse
 - [x] Token usage in logs.
 - [x] Time-to-first-token in logs.
 - [x] Stream cancellation state in logs.
-- [ ] Retry and fallback metadata in logs.
+- [~] Retry and fallback metadata in logs; bounded non-stream retries are implemented, fallback remains opt-in and disabled without a configured alternate model.
 - [x] Final provider status/error code in logs.
 
 ## 13. Controller-free gateway transition

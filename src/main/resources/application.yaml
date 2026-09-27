@@ -24,6 +24,8 @@ management:
 
 ai:
   gateway:
+    execution:
+      max-attempts: 1
     openai:
       base-url: ${OPENAI_BASE_URL:https://api.openai.com}
       api-key: ${OPENAI_API_KEY:}
