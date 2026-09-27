@@ -41,7 +41,9 @@ public record GatewayAuditEvent(
       long durationMs,
       Long upstreamDurationMs,
       int retryCount,
-      boolean fallbackUsed) {}
+      boolean fallbackUsed,
+      String upstreamRequestId,
+      String streamTermination) {}
 
   public record GuardrailSummary(
       List<String> configured, List<String> evaluated, String decision, boolean blocked) {}

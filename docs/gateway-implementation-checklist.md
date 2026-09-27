@@ -128,7 +128,7 @@ Provider request JSON
 - [x] Implement streaming execution using `ChatModel.stream(prompt)`.
 - [ ] Capture provider response metadata.
 - [ ] Capture token usage when available.
-- [ ] Capture provider request/correlation IDs.
+- [x] Capture provider request/correlation IDs.
 - [ ] Apply timeout and cancellation behavior.
 - [ ] Map provider exceptions to gateway exceptions.
 - [ ] Track time-to-first-token and total stream duration.
@@ -169,7 +169,7 @@ ChatResponse / streamed ChatResponse
 
 - [x] Write non-streaming JSON responses.
 - [x] Write provider-compatible response headers.
-- [ ] Write provider request IDs.
+- [x] Write provider request IDs.
 - [~] Write provider-compatible SSE event names.
 - [x] Emit stream completion events.
 - [~] Emit sanitized stream error events.

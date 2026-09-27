@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -85,6 +87,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
       return;
     }
     ProviderResponse providerResponse = transformer.transform(route, chatResponse);
+    storeProviderRequestId(request, chatResponse);
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getWriter(), providerResponse.body());
@@ -117,11 +120,14 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     AtomicReference<Disposable> subscriptionReference = new AtomicReference<>();
     Disposable subscription =
         stream.subscribe(
-            chunk -> writeChunk(writer, transformer.transformChunk(route, chunk)),
-            error -> completeWithError(request, asyncContext, writer, error),
+            chunk -> {
+              storeProviderRequestId(request, chunk);
+              writeChunk(writer, transformer.transformChunk(route, chunk));
+            },
+            error -> completeWithError(request, route, asyncContext, writer, error),
             () -> completeStream(route, asyncContext, writer));
     subscriptionReference.set(subscription);
-    asyncContext.addListener(new StreamLifecycleListener(subscriptionReference));
+    asyncContext.addListener(new StreamLifecycleListener(request, subscriptionReference));
     request.setAttribute(
         GatewayRequestAttributes.CHAT_RESPONSE_STREAM + ".subscription", subscription);
   }
@@ -150,14 +156,23 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
   }
 
   private void completeWithError(
-      HttpServletRequest request, AsyncContext asyncContext, PrintWriter writer, Throwable error) {
-    request.setAttribute(GatewayRequestAttributes.ERROR, error);
+      HttpServletRequest request,
+      GatewayRoute route,
+      AsyncContext asyncContext,
+      PrintWriter writer,
+      Throwable error) {
+    Throwable normalized = normalizeStreamError(request, route, error);
+    request.setAttribute(GatewayRequestAttributes.ERROR, normalized);
+    request.setAttribute(
+        GatewayRequestAttributes.STREAM_TERMINATION, streamTermination(normalized));
     synchronized (writer) {
       if (!writer.checkError()) {
         String code =
-            error instanceof GuardrailViolationException
+            normalized instanceof GuardrailViolationException
                 ? "response_guardrail_blocked"
-                : "stream_execution_failed";
+                : normalized instanceof TimeoutException
+                    ? "stream_timeout"
+                    : "stream_execution_failed";
         writer.write("event: error\n");
         writer.write("data: {\"error\":\"" + code + "\"}\n\n");
         writer.flush();
@@ -188,25 +203,67 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     return ((StreamingResponseTransformer) transformer).provider();
   }
 
+  private static void storeProviderRequestId(HttpServletRequest request, ChatResponse response) {
+    if (response.getMetadata() != null && response.getMetadata().getId() != null) {
+      request.setAttribute(
+          GatewayRequestAttributes.PROVIDER_REQUEST_ID, response.getMetadata().getId());
+    }
+  }
+
+  private static Throwable normalizeStreamError(
+      HttpServletRequest request, GatewayRoute route, Throwable error) {
+    if (error instanceof GuardrailViolationException
+        || error instanceof TimeoutException
+        || error instanceof CancellationException) {
+      return error;
+    }
+    com.codexparas.ai_gateway.model.PreparedChatModel prepared =
+        (com.codexparas.ai_gateway.model.PreparedChatModel)
+            request.getAttribute(GatewayRequestAttributes.PREPARED_CHAT_MODEL);
+    return prepared == null
+        ? error
+        : new ProviderExecutionException(prepared.provider(), prepared.model(), error);
+  }
+
+  private static String streamTermination(Throwable error) {
+    if (error instanceof TimeoutException) return "TIMEOUT";
+    if (error instanceof CancellationException) return "CANCELLED";
+    if (error instanceof GuardrailViolationException) return "GUARDRAIL_BLOCKED";
+    return "PROVIDER_ERROR";
+  }
+
   private static final class StreamLifecycleListener implements AsyncListener {
+    private final HttpServletRequest request;
     private final AtomicReference<Disposable> subscription;
 
-    private StreamLifecycleListener(AtomicReference<Disposable> subscription) {
+    private StreamLifecycleListener(
+        HttpServletRequest request, AtomicReference<Disposable> subscription) {
+      this.request = request;
       this.subscription = subscription;
     }
 
     @Override
     public void onComplete(AsyncEvent event) {
+      if (request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION) == null) {
+        request.setAttribute(GatewayRequestAttributes.STREAM_TERMINATION, "COMPLETED");
+      }
       dispose();
     }
 
     @Override
     public void onTimeout(AsyncEvent event) {
+      request.setAttribute(
+          GatewayRequestAttributes.ERROR, new TimeoutException("stream timed out"));
+      request.setAttribute(GatewayRequestAttributes.STREAM_TERMINATION, "TIMEOUT");
       dispose();
     }
 
     @Override
     public void onError(AsyncEvent event) {
+      request.setAttribute(GatewayRequestAttributes.ERROR, event.getThrowable());
+      request.setAttribute(
+          GatewayRequestAttributes.STREAM_TERMINATION,
+          event.getThrowable() instanceof java.io.IOException ? "DISCONNECTED" : "STREAM_ERROR");
       dispose();
     }
 

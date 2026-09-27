@@ -12,6 +12,10 @@ public final class GatewayRequestAttributes {
       GatewayRequestAttributes.class.getName() + ".chatResponse";
   public static final String CHAT_RESPONSE_STREAM =
       GatewayRequestAttributes.class.getName() + ".chatResponseStream";
+  public static final String PROVIDER_REQUEST_ID =
+      GatewayRequestAttributes.class.getName() + ".providerRequestId";
+  public static final String STREAM_TERMINATION =
+      GatewayRequestAttributes.class.getName() + ".streamTermination";
   public static final String PREPARED_CHAT_MODEL =
       GatewayRequestAttributes.class.getName() + ".preparedChatModel";
   public static final String REQUEST_BODY =

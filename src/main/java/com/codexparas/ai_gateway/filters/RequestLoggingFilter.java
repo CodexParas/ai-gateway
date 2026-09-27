@@ -146,7 +146,9 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                 Duration.between(started, completed).toMillis(),
                 null,
                 0,
-                false),
+                false,
+                (String) request.getAttribute(GatewayRequestAttributes.PROVIDER_REQUEST_ID),
+                (String) request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION)),
             new GatewayAuditEvent.GuardrailSummary(
                 configured,
                 decision == null ? List.of() : decision.evaluated(),
