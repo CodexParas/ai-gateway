@@ -226,8 +226,8 @@ ChatResponse / streamed ChatResponse
 - [x] Non-streaming execution tests.
 - [x] Response transformer tests.
 - [x] Request guardrail tests.
-- [ ] Response guardrail tests.
+- [x] Response guardrail tests.
 - [ ] SSE chunk and cancellation tests.
 - [ ] Filter ordering tests.
-- [ ] Filter-level exception tests.
+- [x] Filter-level exception tests.
 - [ ] End-to-end controller-free gateway tests.
