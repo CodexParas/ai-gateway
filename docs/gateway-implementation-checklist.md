@@ -27,7 +27,7 @@ Legend:
 - [x] Request transformation filter/service SPI.
 - [~] Spring AI request execution filter.
 - [~] Response transformation filter/service.
-- [ ] Response guardrail filter.
+- [x] Response guardrail filter.
 - [~] Provider-compatible response writer.
 - [~] Streaming/SSE response writer.
 - [x] Completion logging and Kafka publication.
@@ -156,14 +156,14 @@ ChatResponse / streamed ChatResponse
 
 ## 9. Response guardrails
 
-- [ ] Add response-stage guardrail execution.
-- [ ] Support response redaction.
-- [ ] Support response blocking.
-- [ ] Support response transformation.
-- [ ] Apply response guardrails to non-streaming responses.
-- [ ] Apply response guardrails to streaming chunks or bounded aggregates.
-- [ ] Define behavior when a stream is blocked after partial output.
-- [ ] Include response guardrail results in the audit event.
+- [x] Add response-stage guardrail execution.
+- [x] Support response redaction.
+- [x] Support response blocking.
+- [x] Support response transformation.
+- [x] Apply response guardrails to non-streaming responses.
+- [x] Apply response guardrails to streaming chunks or bounded aggregates.
+- [~] Define behavior when a stream is blocked after partial output.
+- [x] Include response guardrail results in the audit event.
 
 ## 10. Provider-compatible response writing
 

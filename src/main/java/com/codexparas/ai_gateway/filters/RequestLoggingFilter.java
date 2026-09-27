@@ -109,6 +109,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     String outcome = error == null && httpStatus < 400 ? "SUCCESS" : "FAILURE";
     GuardrailDecision decision =
         (GuardrailDecision) request.getAttribute(GatewayRequestAttributes.GUARDRAIL_DECISION);
+    GuardrailDecision responseDecision =
+        (GuardrailDecision)
+            request.getAttribute(GatewayRequestAttributes.RESPONSE_GUARDRAIL_DECISION);
+    decision = combineGuardrailDecisions(decision, responseDecision);
     List<String> configured = decision == null ? List.of() : decision.configured();
     GatewayAuditEvent event =
         new GatewayAuditEvent(
@@ -156,6 +160,25 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             new GatewayAuditEvent.Retention(
                 completed.plus(Duration.ofDays(properties.purgeDays()))));
     auditPublisher.publish(event);
+  }
+
+  private static GuardrailDecision combineGuardrailDecisions(
+      GuardrailDecision requestDecision, GuardrailDecision responseDecision) {
+    if (requestDecision == null) return responseDecision;
+    if (responseDecision == null) return requestDecision;
+    return new GuardrailDecision(
+        java.util.stream.Stream.concat(
+                requestDecision.configured().stream(), responseDecision.configured().stream())
+            .toList(),
+        java.util.stream.Stream.concat(
+                requestDecision.evaluated().stream(), responseDecision.evaluated().stream())
+            .toList(),
+        java.util.stream.Stream.concat(
+                requestDecision.violations().stream(), responseDecision.violations().stream())
+            .toList(),
+        responseDecision.blocked() ? "BLOCK" : requestDecision.decision(),
+        requestDecision.blocked() || responseDecision.blocked(),
+        responseDecision.transformedBody());
   }
 
   private final class CompletionListener implements AsyncListener {

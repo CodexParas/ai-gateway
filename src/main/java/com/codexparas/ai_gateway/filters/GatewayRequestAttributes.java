@@ -19,6 +19,8 @@ public final class GatewayRequestAttributes {
   public static final String ERROR = GatewayRequestAttributes.class.getName() + ".error";
   public static final String GUARDRAIL_DECISION =
       GatewayRequestAttributes.class.getName() + ".guardrailDecision";
+  public static final String RESPONSE_GUARDRAIL_DECISION =
+      GatewayRequestAttributes.class.getName() + ".responseGuardrailDecision";
   public static final String UPSTREAM_CREDENTIAL =
       GatewayRequestAttributes.class.getName() + ".upstreamCredential";
 
