@@ -1,6 +1,7 @@
 package com.codexparas.ai_gateway.execution;
 
 import com.codexparas.ai_gateway.route.GatewayRoute;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -10,6 +11,8 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.content.Media;
+import org.springframework.util.MimeTypeUtils;
 import tools.jackson.databind.JsonNode;
 
 abstract class AbstractChatRequestTransformer implements RequestTransformer {
@@ -73,8 +76,36 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
                               node.path("name").asString(),
                               text)))
                   .build());
-      default -> messages.add(new UserMessage(text));
+      default -> messages.add(userMessage(node, text));
     }
+  }
+
+  private static UserMessage userMessage(JsonNode node, String text) {
+    UserMessage.Builder builder = UserMessage.builder().text(text);
+    JsonNode parts = node.get("content");
+    if (parts != null && parts.isArray()) {
+      List<Media> media = new ArrayList<>();
+      parts.forEach(
+          part -> {
+            JsonNode image = part.get("image_url");
+            if (image != null) {
+              String url = image.isTextual() ? image.asString() : image.path("url").asString();
+              if (!url.isBlank()) media.add(media(url, part.path("mime_type").asString("image/*")));
+            }
+            JsonNode uri = part.get("uri");
+            if (uri != null && uri.isTextual()) {
+              media.add(
+                  media(
+                      uri.asString(), part.path("mime_type").asString("application/octet-stream")));
+            }
+          });
+      if (!media.isEmpty()) builder.media(media);
+    }
+    return builder.build();
+  }
+
+  private static Media media(String value, String mimeType) {
+    return new Media(MimeTypeUtils.parseMimeType(mimeType), URI.create(value));
   }
 
   private static String content(JsonNode node) {

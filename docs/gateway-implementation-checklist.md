@@ -103,7 +103,7 @@ Expected routes include:
 - [x] Define `TransformedChatRequest`.
 - [x] Transform incoming protocol messages into Spring AI `Message` objects.
 - [x] Transform incoming protocol options into Spring AI `ChatOptions`.
-- [~] Preserve system, user, assistant, tool, and multimodal content where supported.
+- [x] Preserve system, user, assistant, tool, and supported multimodal content.
 - [~] Preserve temperature, max tokens, top-p, stop sequences, tools, and response format.
 - [x] Add OpenAI request transformer.
 - [x] Add Anthropic request transformer.
