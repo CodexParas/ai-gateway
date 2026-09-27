@@ -162,7 +162,7 @@ ChatResponse / streamed ChatResponse
 - [x] Support response transformation.
 - [x] Apply response guardrails to non-streaming responses.
 - [x] Apply response guardrails to streaming chunks or bounded aggregates.
-- [~] Define behavior when a stream is blocked after partial output.
+- [x] Define behavior when a stream is blocked after partial output.
 - [x] Include response guardrail results in the audit event.
 
 ## 10. Provider-compatible response writing
@@ -170,10 +170,10 @@ ChatResponse / streamed ChatResponse
 - [x] Write non-streaming JSON responses.
 - [x] Write provider-compatible response headers.
 - [x] Write provider request IDs.
-- [~] Write provider-compatible SSE event names.
+- [x] Write provider-compatible SSE event names.
 - [x] Emit stream completion events.
-- [~] Emit sanitized stream error events.
-- [~] Handle client disconnects.
+- [x] Emit sanitized stream error events.
+- [x] Handle client disconnects.
 - [x] Cancel upstream model execution on disconnect.
 - [x] Ensure exactly one completion audit event per request.
 
@@ -187,8 +187,8 @@ ChatResponse / streamed ChatResponse
 - [x] Map unsupported provider/model errors.
 - [x] Map request validation errors.
 - [x] Map guardrail violations.
-- [~] Map provider execution errors.
-- [~] Map stream timeout, cancellation, and disconnect errors.
+- [x] Map provider execution errors.
+- [x] Map stream timeout, cancellation, and disconnect errors.
 - [x] Prevent secrets and stack traces from reaching clients.
 
 ## 12. Logging and audit completeness
@@ -211,9 +211,9 @@ ChatResponse / streamed ChatResponse
 
 - [x] Add catch-all gateway routing entry point.
 - [x] Route all supported provider paths through the filter pipeline.
-- [ ] Remove provider-specific controller dependency from the target execution path.
-- [ ] Retain provider services only as adapters where still required.
-- [ ] Remove or deprecate duplicate controller execution paths.
+- [x] Remove provider-specific controller dependency from the target execution path.
+- [x] Retain provider services only as adapters where still required.
+- [~] Remove or deprecate duplicate controller execution paths; legacy routes remain for compatibility.
 
 ## 14. Testing
 
