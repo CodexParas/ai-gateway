@@ -83,8 +83,10 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
       }
       chain.doFilter(request, response);
     } catch (RuntimeException exception) {
-      request.setAttribute(GatewayRequestAttributes.ERROR, exception);
-      throw exception;
+      ProviderExecutionException providerException =
+          new ProviderExecutionException(prepared.provider(), prepared.model(), exception);
+      request.setAttribute(GatewayRequestAttributes.ERROR, providerException);
+      throw providerException;
     }
   }
 

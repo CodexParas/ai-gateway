@@ -1,8 +1,12 @@
 package com.codexparas.ai_gateway.execution;
 
+import com.codexparas.ai_gateway.config.GatewayStreamingProperties;
+import com.codexparas.ai_gateway.exception.GuardrailViolationException;
 import com.codexparas.ai_gateway.filters.GatewayRequestAttributes;
 import com.codexparas.ai_gateway.route.GatewayRoute;
 import jakarta.servlet.AsyncContext;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
@@ -30,14 +35,17 @@ import tools.jackson.databind.ObjectMapper;
 @Order(Ordered.HIGHEST_PRECEDENCE + 60)
 public class GatewayResponseFilter extends OncePerRequestFilter {
   private final ObjectMapper objectMapper;
+  private final GatewayStreamingProperties streamingProperties;
   private final Map<String, ResponseTransformer> responseTransformers;
   private final Map<String, StreamingResponseTransformer> streamingTransformers;
 
   public GatewayResponseFilter(
       ObjectMapper objectMapper,
+      GatewayStreamingProperties streamingProperties,
       List<ResponseTransformer> responseTransformers,
       List<StreamingResponseTransformer> streamingTransformers) {
     this.objectMapper = objectMapper;
+    this.streamingProperties = streamingProperties;
     this.responseTransformers = index(responseTransformers);
     this.streamingTransformers = index(streamingTransformers);
   }
@@ -104,12 +112,16 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
 
     AsyncContext asyncContext =
         request.isAsyncStarted() ? request.getAsyncContext() : request.startAsync();
+    asyncContext.setTimeout(streamingProperties.timeout().toMillis());
     PrintWriter writer = response.getWriter();
+    AtomicReference<Disposable> subscriptionReference = new AtomicReference<>();
     Disposable subscription =
         stream.subscribe(
             chunk -> writeChunk(writer, transformer.transformChunk(route, chunk)),
-            error -> completeWithError(asyncContext, writer, error),
+            error -> completeWithError(request, asyncContext, writer, error),
             () -> completeStream(route, asyncContext, writer));
+    subscriptionReference.set(subscription);
+    asyncContext.addListener(new StreamLifecycleListener(subscriptionReference));
     request.setAttribute(
         GatewayRequestAttributes.CHAT_RESPONSE_STREAM + ".subscription", subscription);
   }
@@ -137,11 +149,17 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     asyncContext.complete();
   }
 
-  private void completeWithError(AsyncContext asyncContext, PrintWriter writer, Throwable error) {
+  private void completeWithError(
+      HttpServletRequest request, AsyncContext asyncContext, PrintWriter writer, Throwable error) {
+    request.setAttribute(GatewayRequestAttributes.ERROR, error);
     synchronized (writer) {
       if (!writer.checkError()) {
+        String code =
+            error instanceof GuardrailViolationException
+                ? "response_guardrail_blocked"
+                : "stream_execution_failed";
         writer.write("event: error\n");
-        writer.write("data: {\"error\":\"stream_execution_failed\"}\n\n");
+        writer.write("data: {\"error\":\"" + code + "\"}\n\n");
         writer.flush();
       }
     }
@@ -168,5 +186,38 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
       return responseTransformer.provider();
     }
     return ((StreamingResponseTransformer) transformer).provider();
+  }
+
+  private static final class StreamLifecycleListener implements AsyncListener {
+    private final AtomicReference<Disposable> subscription;
+
+    private StreamLifecycleListener(AtomicReference<Disposable> subscription) {
+      this.subscription = subscription;
+    }
+
+    @Override
+    public void onComplete(AsyncEvent event) {
+      dispose();
+    }
+
+    @Override
+    public void onTimeout(AsyncEvent event) {
+      dispose();
+    }
+
+    @Override
+    public void onError(AsyncEvent event) {
+      dispose();
+    }
+
+    @Override
+    public void onStartAsync(AsyncEvent event) {
+      // The current async request owns the subscription.
+    }
+
+    private void dispose() {
+      Disposable current = subscription.get();
+      if (current != null) current.dispose();
+    }
   }
 }

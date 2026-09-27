@@ -65,3 +65,5 @@ ai:
       include-request-body: ${AI_GATEWAY_LOGGING_INCLUDE_REQUEST_BODY:false}
       include-response-body: ${AI_GATEWAY_LOGGING_INCLUDE_RESPONSE_BODY:false}
       purge-days: ${AI_GATEWAY_LOGGING_PURGE_DAYS:30}
+    streaming:
+      timeout: ${AI_GATEWAY_STREAMING_TIMEOUT:5m}

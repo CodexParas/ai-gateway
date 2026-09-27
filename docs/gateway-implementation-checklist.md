@@ -188,7 +188,7 @@ ChatResponse / streamed ChatResponse
 - [x] Map request validation errors.
 - [x] Map guardrail violations.
 - [~] Map provider execution errors.
-- [ ] Map stream timeout, cancellation, and disconnect errors.
+- [~] Map stream timeout, cancellation, and disconnect errors.
 - [x] Prevent secrets and stack traces from reaching clients.
 
 ## 12. Logging and audit completeness

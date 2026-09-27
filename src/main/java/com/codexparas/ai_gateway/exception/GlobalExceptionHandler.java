@@ -1,6 +1,7 @@
 package com.codexparas.ai_gateway.exception;
 
 import com.codexparas.ai_gateway.dto.ValidationErrorResponse;
+import com.codexparas.ai_gateway.execution.ProviderExecutionException;
 import com.codexparas.ai_gateway.model.ModelConfigurationService;
 import com.codexparas.ai_gateway.openai.service.OpenAiInferenceService;
 import java.util.List;
@@ -91,5 +92,15 @@ public class GlobalExceptionHandler {
   ResponseEntity<Map<String, String>> handleUnexpected(Exception exception) {
     return ResponseEntity.internalServerError()
         .body(Map.of("error", "inference_failed", "message", "Inference request failed"));
+  }
+
+  @ExceptionHandler(ProviderExecutionException.class)
+  ResponseEntity<Map<String, String>> handleProviderExecution(
+      ProviderExecutionException exception) {
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+        .body(
+            Map.of(
+                "error", "provider_execution_failed",
+                "message", "The upstream provider request failed"));
   }
 }

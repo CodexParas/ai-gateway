@@ -1,6 +1,7 @@
 package com.codexparas.ai_gateway.filters;
 
 import com.codexparas.ai_gateway.exception.GuardrailViolationException;
+import com.codexparas.ai_gateway.execution.ProviderExecutionException;
 import com.codexparas.ai_gateway.model.ChatModelFactory;
 import com.codexparas.ai_gateway.model.ModelConfigurationService;
 import jakarta.servlet.FilterChain;
@@ -99,6 +100,13 @@ public class GatewayExceptionFilter extends OncePerRequestFilter {
           HttpServletResponse.SC_SERVICE_UNAVAILABLE,
           "chat_model_unavailable",
           "The requested provider model could not be prepared",
+          List.of());
+    }
+    if (exception instanceof ProviderExecutionException) {
+      return new ErrorDetails(
+          HttpServletResponse.SC_BAD_GATEWAY,
+          "provider_execution_failed",
+          "The upstream provider request failed",
           List.of());
     }
     if (exception instanceof IllegalArgumentException) {
