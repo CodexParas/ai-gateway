@@ -34,7 +34,7 @@ class RequestTransformerTest {
     assertThat(result.messages()).hasSize(2);
     assertThat(result.messages().get(0).getMessageType()).isEqualTo(MessageType.SYSTEM);
     assertThat(result.messages().get(1).getText()).isEqualTo("Hello");
-    assertThat(result.chatOptions().getModel()).isEqualTo("gpt-5");
+    assertThat(result.chatOptions().getModel()).isNull();
     assertThat(result.chatOptions().getTemperature()).isEqualTo(0.2);
     assertThat(result.chatOptions().getMaxTokens()).isEqualTo(100);
     assertThat(result.chatOptions().getStopSequences()).containsExactly("END");

@@ -2,6 +2,8 @@ package com.codexparas.ai_gateway.execution;
 
 import com.codexparas.ai_gateway.config.GatewayExecutionProperties;
 import com.codexparas.ai_gateway.filters.GatewayRequestAttributes;
+import com.codexparas.ai_gateway.model.ChatModelFactory;
+import com.codexparas.ai_gateway.model.ModelConfigurationService;
 import com.codexparas.ai_gateway.model.PreparedChatModel;
 import com.codexparas.ai_gateway.route.GatewayRoute;
 import jakarta.servlet.FilterChain;
@@ -9,6 +11,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -16,6 +19,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.NonNull;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -31,14 +35,20 @@ import tools.jackson.databind.node.ObjectNode;
 public class RequestExecutionFilter extends OncePerRequestFilter {
   private final ObjectMapper objectMapper;
   private final GatewayExecutionProperties executionProperties;
+  private final ModelConfigurationService modelConfigurationService;
+  private final ChatModelFactory chatModelFactory;
   private final Map<String, RequestTransformer> transformers;
 
   public RequestExecutionFilter(
       ObjectMapper objectMapper,
       List<RequestTransformer> transformers,
-      GatewayExecutionProperties executionProperties) {
+      GatewayExecutionProperties executionProperties,
+      ModelConfigurationService modelConfigurationService,
+      ChatModelFactory chatModelFactory) {
     this.objectMapper = objectMapper;
     this.executionProperties = executionProperties;
+    this.modelConfigurationService = modelConfigurationService;
+    this.chatModelFactory = chatModelFactory;
     this.transformers =
         transformers.stream()
             .collect(
@@ -80,7 +90,11 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
       JsonNode effectiveRequest = mergeConfiguredDefaults(requestBody, prepared.request());
       TransformedChatRequest transformed = transformer.transform(route, effectiveRequest);
       request.setAttribute(GatewayRequestAttributes.TRANSFORMED_REQUEST, transformed);
-      Prompt prompt = new Prompt(transformed.messages(), transformed.chatOptions());
+      ChatOptions effectiveOptions =
+          transformed.chatOptions() instanceof org.springframework.ai.openai.OpenAiChatOptions
+              ? transformed.chatOptions().mutate().model(prepared.model()).build()
+              : transformed.chatOptions();
+      Prompt prompt = new Prompt(transformed.messages(), effectiveOptions);
       boolean streaming = route.streaming() || effectiveRequest.path("stream").asBoolean(false);
       if (streaming) {
         Flux<ChatResponse> stream = prepared.chatModel().stream(prompt);
@@ -110,9 +124,36 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
         if (attempt == executionProperties.maxAttempts()) break;
       }
     }
+    String fallbackModel = configuredFallback(prepared);
+    if (fallbackModel != null && isAllowedFallback(request, fallbackModel)) {
+      JsonNode fallbackConfiguration =
+          modelConfigurationService.findAndValidate(fallbackModel).block(Duration.ofSeconds(5));
+      PreparedChatModel fallback = chatModelFactory.prepare(fallbackModel, fallbackConfiguration);
+      request.setAttribute(GatewayRequestAttributes.PREPARED_CHAT_MODEL, fallback);
+      request.setAttribute(GatewayRequestAttributes.FALLBACK_USED, Boolean.TRUE);
+      request.setAttribute(GatewayRequestAttributes.RETRY_COUNT, 0);
+      return fallback.chatModel().call(prompt);
+    }
     throw failure == null
         ? new IllegalStateException("Provider execution did not produce a response")
         : failure;
+  }
+
+  private static String configuredFallback(PreparedChatModel prepared) {
+    JsonNode configuredRequest = prepared.request();
+    JsonNode fallback = configuredRequest == null ? null : configuredRequest.get("fallbackModel");
+    return fallback != null && fallback.isTextual() && !fallback.asString().isBlank()
+        ? fallback.asString()
+        : null;
+  }
+
+  private static boolean isAllowedFallback(HttpServletRequest request, String fallbackModel) {
+    var credential =
+        (com.codexparas.ai_gateway.security.UpstreamCredential)
+            request.getAttribute(GatewayRequestAttributes.UPSTREAM_CREDENTIAL);
+    return credential == null
+        || credential.allowedModels().isEmpty()
+        || credential.allowedModels().contains(fallbackModel);
   }
 
   private static JsonNode mergeConfiguredDefaults(

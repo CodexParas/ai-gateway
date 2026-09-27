@@ -7,6 +7,8 @@ import static org.mockito.Mockito.when;
 
 import com.codexparas.ai_gateway.config.GatewayExecutionProperties;
 import com.codexparas.ai_gateway.filters.GatewayRequestAttributes;
+import com.codexparas.ai_gateway.model.ChatModelFactory;
+import com.codexparas.ai_gateway.model.ModelConfigurationService;
 import com.codexparas.ai_gateway.model.PreparedChatModel;
 import com.codexparas.ai_gateway.route.GatewayRoute;
 import java.util.List;
@@ -36,7 +38,11 @@ class RequestExecutionFilterTest {
         .thenReturn(new TransformedChatRequest(List.of(new UserMessage("hello")), null));
     RequestExecutionFilter filter =
         new RequestExecutionFilter(
-            new ObjectMapper(), List.of(transformer), new GatewayExecutionProperties(1));
+            new ObjectMapper(),
+            List.of(transformer),
+            new GatewayExecutionProperties(1),
+            mock(ModelConfigurationService.class),
+            mock(ChatModelFactory.class));
     MockHttpServletRequest request = new MockHttpServletRequest("POST", "/openai/chat/completions");
     request.setAttribute(
         GatewayRequestAttributes.ROUTE, new GatewayRoute("OPENAI", "chat.completions", false));

@@ -129,11 +129,11 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
   }
 
   private ChatOptions options(JsonNode body) {
+    boolean providerSpecificFormat =
+        (provider().equalsIgnoreCase("OPENAI") || provider().equalsIgnoreCase("AZURE"))
+            && body.path("response_format").isObject();
     ChatOptions.Builder<?> builder =
-        provider().equalsIgnoreCase("OPENAI") || provider().equalsIgnoreCase("AZURE")
-            ? OpenAiChatOptions.builder()
-            : ChatOptions.builder();
-    setText(builder, "model", body.get("model"));
+        providerSpecificFormat ? OpenAiChatOptions.builder() : ChatOptions.builder();
     setDouble(builder, "temperature", body.get("temperature"));
     setDouble(builder, "topP", first(body, "top_p", "topP"));
     setDouble(builder, "frequencyPenalty", body.get("frequency_penalty"));
@@ -187,10 +187,6 @@ abstract class AbstractChatRequestTransformer implements RequestTransformer {
   private static JsonNode first(JsonNode body, String first, String second) {
     JsonNode value = body.get(first);
     return value == null ? body.get(second) : value;
-  }
-
-  private static void setText(ChatOptions.Builder<?> builder, String field, JsonNode value) {
-    if (value != null && value.isTextual()) builder.model(value.asString());
   }
 
   private static void setDouble(ChatOptions.Builder<?> builder, String field, JsonNode value) {
