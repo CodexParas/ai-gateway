@@ -81,4 +81,9 @@ abstract class AbstractResponseTransformer
     Generation generation = generation(response);
     return generation == null ? null : generation.getOutput();
   }
+
+  protected static java.util.List<AssistantMessage.ToolCall> toolCalls(ChatResponse response) {
+    AssistantMessage assistant = assistant(response);
+    return assistant == null ? java.util.List.of() : assistant.getToolCalls();
+  }
 }

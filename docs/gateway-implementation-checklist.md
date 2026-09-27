@@ -142,8 +142,8 @@ Provider request JSON
 - [x] Transform Spring AI `ChatResponse` into Bedrock response format.
 - [x] Transform Spring AI `ChatResponse` into Google response format.
 - [x] Transform Spring AI `ChatResponse` into Azure response format.
-- [~] Transform usage metadata into provider-compatible usage fields.
-- [ ] Transform tool calls and finish reasons completely.
+- [x] Transform usage metadata into provider-compatible usage fields.
+- [x] Transform tool calls and finish reasons completely.
 - [x] Define consistent behavior when provider metadata is unavailable.
 
 Target transformation:

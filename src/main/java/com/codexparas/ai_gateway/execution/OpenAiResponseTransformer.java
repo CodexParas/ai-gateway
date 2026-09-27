@@ -30,7 +30,9 @@ public class OpenAiResponseTransformer extends AbstractResponseTransformer {
     choice.put("index", 0);
     ObjectNode message = choice.putObject("message");
     putAssistantRole(message);
-    message.put("content", text(response));
+    if (toolCalls(response).isEmpty()) message.put("content", text(response));
+    else message.putNull("content");
+    addToolCalls(message, response);
     putNullable(choice, "finish_reason", finishReason(response));
     putUsage(root, usage(response));
     return new ProviderResponse(null, root);
@@ -45,8 +47,24 @@ public class OpenAiResponseTransformer extends AbstractResponseTransformer {
     ObjectNode choice = root.putArray("choices").addObject();
     choice.put("index", 0);
     ObjectNode delta = choice.putObject("delta");
-    delta.put("content", text(response));
+    if (!text(response).isBlank()) delta.put("content", text(response));
+    addToolCalls(delta, response);
     putNullable(choice, "finish_reason", finishReason(response));
     return new ProviderResponse("data", root);
+  }
+
+  private static void addToolCalls(ObjectNode node, ChatResponse response) {
+    if (toolCalls(response).isEmpty()) return;
+    var calls = node.putArray("tool_calls");
+    int index = 0;
+    for (var call : toolCalls(response)) {
+      ObjectNode item = calls.addObject();
+      item.put("index", index++);
+      putNullable(item, "id", call.id());
+      item.put("type", call.type() == null || call.type().isBlank() ? "function" : call.type());
+      ObjectNode function = item.putObject("function");
+      putNullable(function, "name", call.name());
+      putNullable(function, "arguments", call.arguments());
+    }
   }
 }

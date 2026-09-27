@@ -24,7 +24,17 @@ public final class GoogleResponseTransformer extends AbstractResponseTransformer
     ObjectNode candidate = root.putArray("candidates").addObject();
     ObjectNode content = candidate.putObject("content");
     content.put("role", "model");
-    content.putArray("parts").addObject().put("text", text(response));
+    var parts = content.putArray("parts");
+    if (!text(response).isBlank()) parts.addObject().put("text", text(response));
+    for (var call : toolCalls(response)) {
+      ObjectNode functionCall = parts.addObject().putObject("functionCall");
+      putNullable(functionCall, "name", call.name());
+      try {
+        functionCall.set("args", objectMapper.readTree(call.arguments()));
+      } catch (Exception exception) {
+        functionCall.putObject("args");
+      }
+    }
     putNullable(candidate, "finishReason", finishReason(response));
     addUsage(root, response);
     return new ProviderResponse(null, root);

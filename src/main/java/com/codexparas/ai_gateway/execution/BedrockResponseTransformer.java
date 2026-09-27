@@ -24,7 +24,18 @@ public final class BedrockResponseTransformer extends AbstractResponseTransforme
     ObjectNode output = root.putObject("output");
     ObjectNode message = output.putObject("message");
     message.put("role", "assistant");
-    message.putArray("content").addObject().put("text", text(response));
+    var content = message.putArray("content");
+    if (!text(response).isBlank()) content.addObject().put("text", text(response));
+    for (var call : toolCalls(response)) {
+      ObjectNode tool = content.addObject().putObject("toolUse");
+      putNullable(tool, "toolUseId", call.id());
+      putNullable(tool, "name", call.name());
+      try {
+        tool.set("input", objectMapper.readTree(call.arguments()));
+      } catch (Exception exception) {
+        tool.putObject("input");
+      }
+    }
     putNullable(root, "stopReason", finishReason(response));
     if (usage(response) != null) {
       ObjectNode usage = root.putObject("usage");

@@ -24,7 +24,20 @@ public final class AnthropicResponseTransformer extends AbstractResponseTransfor
     root.put("id", responseId(response));
     root.put("type", "message");
     root.put("role", "assistant");
-    root.put("content", text(response));
+    var content = root.putArray("content");
+    if (!text(response).isBlank())
+      content.addObject().put("type", "text").put("text", text(response));
+    for (var call : toolCalls(response)) {
+      ObjectNode tool = content.addObject();
+      tool.put("type", "tool_use");
+      putNullable(tool, "id", call.id());
+      putNullable(tool, "name", call.name());
+      try {
+        tool.set("input", objectMapper.readTree(call.arguments()));
+      } catch (Exception exception) {
+        tool.putObject("input");
+      }
+    }
     putNullable(root, "model", model(response));
     putNullable(root, "stop_reason", finishReason(response));
     putUsage(root, usage(response));
