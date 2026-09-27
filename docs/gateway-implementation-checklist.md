@@ -231,4 +231,4 @@ ChatResponse / streamed ChatResponse
 - [~] SSE chunk coverage is present; container-level cancellation requires a real Servlet async container test.
 - [x] Filter ordering tests.
 - [x] Filter-level exception tests.
-- [ ] End-to-end controller-free gateway tests.
+- [~] Controller-free gateway structure and filter execution are covered; full Redis/provider Servlet-container E2E remains environment-dependent.
