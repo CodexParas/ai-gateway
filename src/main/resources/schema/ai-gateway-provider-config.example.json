@@ -1,0 +1,71 @@
+{
+  "id": "openai-primary",
+  "displayName": "OpenAI primary chat model",
+  "enabled": true,
+  "provider": "OPENAI",
+  "model": "gpt-5",
+  "url": "https://api.openai.com",
+  "auth": {
+    "type": "API_KEY",
+    "apiKey": {
+      "source": "ENVIRONMENT",
+      "key": "OPENAI_API_KEY"
+    }
+  },
+  "request": {
+    "protocol": "RESPONSES",
+    "maxTokens": 4096,
+    "temperature": 0.2,
+    "timeoutMs": 60000,
+    "streaming": true
+  },
+  "guardrails": [
+    {
+      "id": "prompt-injection",
+      "type": "PROMPT_INJECTION",
+      "stage": "REQUEST",
+      "action": "BLOCK",
+      "policyRef": "guardrails/prompt-injection/v1"
+    },
+    {
+      "id": "pii-redaction",
+      "type": "PII_REDACTION",
+      "stage": "BOTH",
+      "action": "REDACT",
+      "policyRef": "guardrails/pii/v1"
+    }
+  ],
+  "routing": {
+    "priority": 10,
+    "weight": 100,
+    "capabilities": ["CHAT", "TOOL_CALLING", "JSON_MODE"]
+  },
+  "resilience": {
+    "maxRetries": 2,
+    "backoffMs": 250,
+    "circuitBreaker": {
+      "failureRatePercent": 50,
+      "openStateMs": 30000
+    },
+    "fallbackProviderIds": ["anthropic-fallback"]
+  },
+  "observability": {
+    "emitEvents": true,
+    "logPrompts": false,
+    "logResponses": false,
+    "traceSamplingPercent": 100,
+    "metricsNamespace": "ai_gateway"
+  },
+  "limits": {
+    "requestsPerMinute": 600,
+    "tokensPerMinute": 100000,
+    "maxInputTokens": 100000,
+    "maxOutputTokens": 4096,
+    "monthlyCostLimit": 1000,
+    "currency": "USD"
+  },
+  "metadata": {
+    "environment": "production",
+    "owner": "platform-ai"
+  }
+}

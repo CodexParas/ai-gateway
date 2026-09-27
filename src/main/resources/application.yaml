@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: ai-gateway
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ai:
+  gateway:
+    openai:
+      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${OPENAI_API_KEY:}
+    anthropic:
+      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+      api-key: ${ANTHROPIC_API_KEY:}
+      version: ${ANTHROPIC_VERSION:2023-06-01}
+    gemini:
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      api-key: ${GEMINI_API_KEY:}
+      api-version: ${GEMINI_API_VERSION:v1beta}
+    bedrock:
+      region: ${AWS_REGION:us-east-1}
+    azure-ai:
+      endpoint: ${AZURE_AI_ENDPOINT:https://YOUR-RESOURCE.services.ai.azure.com/models}
+      api-key: ${AZURE_AI_API_KEY:}
+      api-version: ${AZURE_AI_API_VERSION:2025-04-01}
+    routes:
+      claude-code-default:
+        provider: openai
+        upstream-model: gpt-5
+      gpt-5:
+        provider: openai
+        upstream-model: gpt-5
+    observability:
+      kafka-enabled: ${AI_GATEWAY_KAFKA_ENABLED:false}
+      topic: ${AI_GATEWAY_EVENTS_TOPIC:ai-gateway.events}
+    bootstrap:
+      enabled: ${AI_GATEWAY_BOOTSTRAP_ENABLED:false}
+    model-config:
+      redis-hash: ${AI_GATEWAY_MODEL_CONFIG_REDIS_HASH:ai-gateway:model-config}
+    security:
+      enabled: ${AI_GATEWAY_SECURITY_ENABLED:true}
+      credential-hash: ${AI_GATEWAY_CREDENTIAL_HASH:ai-gateway:credentials}
+    logging:
+      enabled: ${AI_GATEWAY_LOGGING_ENABLED:true}
+      topic: ${AI_GATEWAY_LOGGING_TOPIC:ai-gateway.logs}
+      system-name: ${AI_GATEWAY_LOGGING_SYSTEM_NAME:API-GATEWAY}
+      include-request-body: ${AI_GATEWAY_LOGGING_INCLUDE_REQUEST_BODY:false}
+      include-response-body: ${AI_GATEWAY_LOGGING_INCLUDE_RESPONSE_BODY:false}
+      purge-days: ${AI_GATEWAY_LOGGING_PURGE_DAYS:30}

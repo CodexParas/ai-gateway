@@ -1,0 +1,233 @@
+# AI Gateway Implementation Checklist
+
+This checklist tracks the agreed controller-free Servlet gateway implementation.
+
+Legend:
+
+- `[x]` Implemented
+- `[~]` Partially implemented or requires completion
+- `[ ]` Pending
+
+## 1. Gateway filter pipeline
+
+- [x] Logging filter surrounds the gateway request lifecycle.
+- [x] Request ID generation and response propagation.
+- [x] Async request completion listener for Servlet/SSE requests.
+- [x] Upstream credential extraction from bearer, API-key, and `X-API-Key` headers.
+- [x] Credential hash lookup in Redis.
+- [x] Credential status and expiry validation.
+- [x] Organization and application identity resolution from credentials.
+- [x] Credential scope and allowed-model validation.
+- [x] Simple `/{provider}/{operation}` route/protocol resolution filter.
+- [x] Provider request validation filter.
+- [x] Model name extraction and Redis lookup filter.
+- [x] Combined model-name, Redis lookup, parsing, and configuration-validation filter.
+- [x] Spring AI `ChatModel` preparation filter.
+- [x] Request guardrail filter.
+- [x] Request transformation filter/service SPI.
+- [~] Spring AI request execution filter.
+- [~] Response transformation filter/service.
+- [ ] Response guardrail filter.
+- [ ] Provider-compatible response writer.
+- [ ] Streaming/SSE response writer.
+- [x] Completion logging and Kafka publication.
+- [ ] Filter-level exception boundary.
+
+## 2. Route and protocol resolution
+
+- [ ] Define `GatewayRoute` with provider, operation, and streaming mode.
+- [ ] Resolve provider from incoming path and protocol.
+- [ ] Resolve operation from path and HTTP method.
+- [ ] Detect streaming mode from request body, query parameters, or headers.
+- [ ] Reject unsupported or ambiguous paths.
+- [ ] Preserve route metadata for logging and execution.
+
+Expected routes include:
+
+- [ ] OpenAI-compatible chat completions.
+- [ ] OpenAI responses.
+- [ ] Anthropic messages.
+- [ ] Google GenAI generate content.
+- [ ] Bedrock Converse.
+- [ ] Azure/OpenAI-compatible chat completions.
+
+## 3. Model resolution and configuration
+
+- [~] Extract requested model from request path or body.
+- [x] Combine model extraction with Redis model configuration lookup.
+- [x] Resolve Redis hash entry by model name.
+- [x] Raise a model-not-found error when the hash field is absent.
+- [x] Parse stored JSON configuration.
+- [x] Run model configuration validators.
+- [x] Reject malformed or invalid model configuration.
+- [x] Make model resolution route-aware where the protocol uses path model identifiers.
+- [x] Ensure credential scope validation runs after model resolution.
+- [ ] Apply per-model endpoint, region, deployment, and API version settings.
+- [ ] Apply per-model authentication settings to provider model creation.
+- [ ] Apply per-model request options to the Spring AI model.
+
+## 4. Provider request validation
+
+- [x] Define provider validator SPI.
+- [x] Add OpenAI request validator.
+- [x] Add Anthropic request validator.
+- [x] Add Bedrock request validator.
+- [x] Add Google request validator.
+- [x] Add Azure request validator.
+- [x] Validate required protocol fields.
+- [ ] Validate path/model consistency.
+- [x] Validate streaming flags.
+- [x] Validate supported message/content formats.
+- [ ] Validate provider-specific options.
+- [x] Return consistent validation errors.
+
+## 5. Spring AI model preparation
+
+- [x] Use `org.springframework.ai.chat.model.ChatModel` as the runtime abstraction.
+- [x] Keep gateway metadata in `PreparedChatModel`.
+- [x] Bind the actual Spring AI model to the request attribute.
+- [x] Bind the actual Spring AI model to `ChatModelContext` for synchronous execution.
+- [x] Define `ChatModelProviderFactory`.
+- [x] Add OpenAI provider factory.
+- [x] Add Anthropic provider factory.
+- [x] Add Bedrock Converse provider factory.
+- [x] Add Google GenAI provider factory.
+- [x] Add Azure/OpenAI-compatible provider factory.
+- [ ] Create provider models dynamically from Redis configuration.
+- [ ] Avoid relying on ThreadLocal state across asynchronous stream callbacks.
+- [ ] Capture model and request context explicitly for asynchronous execution.
+
+## 6. Request transformers
+
+- [x] Define `RequestTransformer` SPI.
+- [x] Define `TransformedChatRequest`.
+- [x] Transform incoming protocol messages into Spring AI `Message` objects.
+- [x] Transform incoming protocol options into Spring AI `ChatOptions`.
+- [~] Preserve system, user, assistant, tool, and multimodal content where supported.
+- [~] Preserve temperature, max tokens, top-p, stop sequences, tools, and response format.
+- [x] Add OpenAI request transformer.
+- [x] Add Anthropic request transformer.
+- [x] Add Bedrock request transformer.
+- [x] Add Google request transformer.
+- [x] Add Azure request transformer.
+- [ ] Validate unsupported options before execution.
+
+Target transformation:
+
+```text
+Provider request JSON
+  -> RequestTransformer
+  -> List<Message> + ChatOptions
+  -> Prompt
+```
+
+## 7. Spring AI request execution
+
+- [x] Define execution context containing route, credentials, prepared model, and transformed request.
+- [x] Implement non-streaming execution using `ChatModel.call(prompt)`.
+- [x] Implement streaming execution using `ChatModel.stream(prompt)`.
+- [ ] Capture provider response metadata.
+- [ ] Capture token usage when available.
+- [ ] Capture provider request/correlation IDs.
+- [ ] Apply timeout and cancellation behavior.
+- [ ] Map provider exceptions to gateway exceptions.
+- [ ] Track time-to-first-token and total stream duration.
+
+## 8. Response transformers
+
+- [x] Define `ResponseTransformer` SPI.
+- [x] Define `StreamingResponseTransformer` SPI.
+- [x] Transform Spring AI `ChatResponse` into OpenAI-compatible response format.
+- [x] Transform Spring AI `ChatResponse` into Anthropic response format.
+- [x] Transform Spring AI `ChatResponse` into Bedrock response format.
+- [x] Transform Spring AI `ChatResponse` into Google response format.
+- [x] Transform Spring AI `ChatResponse` into Azure response format.
+- [~] Transform usage metadata into provider-compatible usage fields.
+- [ ] Transform tool calls and finish reasons completely.
+- [x] Define consistent behavior when provider metadata is unavailable.
+
+Target transformation:
+
+```text
+ChatResponse / streamed ChatResponse
+  -> ResponseTransformer
+  -> Provider response JSON / SSE event
+```
+
+## 9. Response guardrails
+
+- [ ] Add response-stage guardrail execution.
+- [ ] Support response redaction.
+- [ ] Support response blocking.
+- [ ] Support response transformation.
+- [ ] Apply response guardrails to non-streaming responses.
+- [ ] Apply response guardrails to streaming chunks or bounded aggregates.
+- [ ] Define behavior when a stream is blocked after partial output.
+- [ ] Include response guardrail results in the audit event.
+
+## 10. Provider-compatible response writing
+
+- [ ] Write non-streaming JSON responses.
+- [ ] Write provider-compatible response headers.
+- [ ] Write provider request IDs.
+- [ ] Write provider-compatible SSE event names.
+- [ ] Emit stream completion events.
+- [ ] Emit sanitized stream error events.
+- [ ] Handle client disconnects.
+- [ ] Cancel upstream model execution on disconnect.
+- [ ] Ensure exactly one completion audit event per request.
+
+## 11. Error handling
+
+- [x] Global controller exception handler exists.
+- [ ] Add filter-level gateway exception boundary.
+- [ ] Map route errors to consistent responses.
+- [ ] Map credential errors to consistent responses.
+- [ ] Map model lookup and validation errors.
+- [ ] Map unsupported provider/model errors.
+- [ ] Map request validation errors.
+- [ ] Map guardrail violations.
+- [ ] Map provider execution errors.
+- [ ] Map stream timeout, cancellation, and disconnect errors.
+- [ ] Prevent secrets and stack traces from reaching clients.
+
+## 12. Logging and audit completeness
+
+- [x] Structured gateway audit event.
+- [x] Kafka publisher.
+- [x] Logstash pipeline documentation/configuration.
+- [x] Sanitized request headers.
+- [x] Trusted organization/application identity in logs.
+- [x] Model and provider metadata in logs.
+- [x] Guardrail decision summary in logs.
+- [ ] Provider request ID in logs.
+- [ ] Token usage in logs.
+- [ ] Time-to-first-token in logs.
+- [ ] Stream cancellation state in logs.
+- [ ] Retry and fallback metadata in logs.
+- [ ] Final provider status/error code in logs.
+
+## 13. Controller-free gateway transition
+
+- [ ] Add catch-all gateway routing entry point.
+- [ ] Route all supported provider paths through the filter pipeline.
+- [ ] Remove provider-specific controller dependency from the target execution path.
+- [ ] Retain provider services only as adapters where still required.
+- [ ] Remove or deprecate duplicate controller execution paths.
+
+## 14. Testing
+
+- [ ] Route resolution unit tests.
+- [ ] Model resolution and validation tests.
+- [ ] Credential and scope tests.
+- [ ] Provider request validator tests.
+- [ ] Provider factory tests.
+- [ ] Request transformer tests.
+- [ ] Non-streaming execution tests.
+- [ ] Response transformer tests.
+- [ ] Request guardrail tests.
+- [ ] Response guardrail tests.
+- [ ] SSE chunk and cancellation tests.
+- [ ] Filter ordering tests.
+- [ ] Filter-level exception tests.
+- [ ] End-to-end controller-free gateway tests.
