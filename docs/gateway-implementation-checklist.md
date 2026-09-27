@@ -31,7 +31,7 @@ Legend:
 - [~] Provider-compatible response writer.
 - [~] Streaming/SSE response writer.
 - [x] Completion logging and Kafka publication.
-- [ ] Filter-level exception boundary.
+- [x] Filter-level exception boundary.
 
 ## 2. Route and protocol resolution
 
@@ -180,16 +180,16 @@ ChatResponse / streamed ChatResponse
 ## 11. Error handling
 
 - [x] Global controller exception handler exists.
-- [ ] Add filter-level gateway exception boundary.
-- [ ] Map route errors to consistent responses.
-- [ ] Map credential errors to consistent responses.
-- [ ] Map model lookup and validation errors.
-- [ ] Map unsupported provider/model errors.
-- [ ] Map request validation errors.
-- [ ] Map guardrail violations.
-- [ ] Map provider execution errors.
+- [x] Add filter-level gateway exception boundary.
+- [x] Map route errors to consistent responses.
+- [x] Map credential errors to consistent responses.
+- [x] Map model lookup and validation errors.
+- [x] Map unsupported provider/model errors.
+- [x] Map request validation errors.
+- [x] Map guardrail violations.
+- [~] Map provider execution errors.
 - [ ] Map stream timeout, cancellation, and disconnect errors.
-- [ ] Prevent secrets and stack traces from reaching clients.
+- [x] Prevent secrets and stack traces from reaching clients.
 
 ## 12. Logging and audit completeness
 
