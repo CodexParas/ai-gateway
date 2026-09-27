@@ -30,7 +30,18 @@ public class ChatModelFactory {
       throw new ChatModelPreparationException(
           "No Spring AI ChatModel factory registered for provider " + provider);
     }
-    ChatModel chatModel = providerFactory.create(configuration);
+    ProviderModelConfiguration modelConfiguration =
+        new ProviderModelConfiguration(
+            provider,
+            requiredText(configuration, "model"),
+            nullableText(configuration, "url"),
+            nullableText(configuration, "region"),
+            nullableText(configuration, "deployment"),
+            nullableText(configuration, "apiVersion"),
+            configuration.get("auth"),
+            configuration.get("request"),
+            configuration.get("guardrails"));
+    ChatModel chatModel = providerFactory.create(modelConfiguration);
     if (chatModel == null) {
       throw new ChatModelPreparationException(
           "Spring AI ChatModel factory returned no model for provider " + provider);
@@ -39,14 +50,14 @@ public class ChatModelFactory {
         chatModel,
         requestedModel,
         provider,
-        requiredText(configuration, "model"),
-        nullableText(configuration, "url"),
-        nullableText(configuration, "region"),
-        nullableText(configuration, "deployment"),
-        nullableText(configuration, "apiVersion"),
-        configuration.get("auth"),
-        configuration.get("request"),
-        configuration.get("guardrails"));
+        modelConfiguration.model(),
+        modelConfiguration.url(),
+        modelConfiguration.region(),
+        modelConfiguration.deployment(),
+        modelConfiguration.apiVersion(),
+        modelConfiguration.auth(),
+        modelConfiguration.request(),
+        modelConfiguration.guardrails());
   }
 
   private static String requiredText(JsonNode object, String field) {

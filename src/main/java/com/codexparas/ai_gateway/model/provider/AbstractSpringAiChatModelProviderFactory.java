@@ -2,9 +2,9 @@ package com.codexparas.ai_gateway.model.provider;
 
 import com.codexparas.ai_gateway.model.ChatModelFactory;
 import com.codexparas.ai_gateway.model.ChatModelProviderFactory;
+import com.codexparas.ai_gateway.model.ProviderModelConfiguration;
 import java.util.function.Supplier;
 import org.springframework.ai.chat.model.ChatModel;
-import tools.jackson.databind.JsonNode;
 
 /** Common adapter for provider factories backed by Spring AI auto-configured models. */
 abstract class AbstractSpringAiChatModelProviderFactory implements ChatModelProviderFactory {
@@ -24,7 +24,7 @@ abstract class AbstractSpringAiChatModelProviderFactory implements ChatModelProv
   }
 
   @Override
-  public final ChatModel create(JsonNode configuration) {
+  public ChatModel create(ProviderModelConfiguration configuration) {
     ChatModel model = modelSupplier.get();
     if (model == null) {
       throw new ChatModelFactory.ChatModelPreparationException(

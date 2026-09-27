@@ -23,6 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import reactor.core.publisher.Flux;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 50)
@@ -70,10 +71,11 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
     }
 
     try {
-      TransformedChatRequest transformed = transformer.transform(route, requestBody);
+      JsonNode effectiveRequest = mergeConfiguredDefaults(requestBody, prepared.request());
+      TransformedChatRequest transformed = transformer.transform(route, effectiveRequest);
       request.setAttribute(GatewayRequestAttributes.TRANSFORMED_REQUEST, transformed);
       Prompt prompt = new Prompt(transformed.messages(), transformed.chatOptions());
-      boolean streaming = route.streaming() || requestBody.path("stream").asBoolean(false);
+      boolean streaming = route.streaming() || effectiveRequest.path("stream").asBoolean(false);
       if (streaming) {
         Flux<ChatResponse> stream = prepared.chatModel().stream(prompt);
         request.setAttribute(GatewayRequestAttributes.CHAT_RESPONSE_STREAM, stream);
@@ -88,6 +90,21 @@ public class RequestExecutionFilter extends OncePerRequestFilter {
       request.setAttribute(GatewayRequestAttributes.ERROR, providerException);
       throw providerException;
     }
+  }
+
+  private static JsonNode mergeConfiguredDefaults(
+      JsonNode requestBody, JsonNode configuredRequest) {
+    if (configuredRequest == null || !configuredRequest.isObject()) return requestBody;
+    ObjectNode merged = (ObjectNode) requestBody.deepCopy();
+    configuredRequest
+        .properties()
+        .forEach(
+            entry -> {
+              if (!merged.has(entry.getKey())) {
+                merged.set(entry.getKey(), entry.getValue().deepCopy());
+              }
+            });
+    return merged;
   }
 
   private void writeError(HttpServletResponse response, String error, String message)

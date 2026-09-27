@@ -1,6 +1,9 @@
 package com.codexparas.ai_gateway.model.provider;
 
+import com.codexparas.ai_gateway.model.ProviderModelConfiguration;
+import com.openai.azure.AzureOpenAIServiceVersion;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
@@ -11,5 +14,24 @@ public final class AzureOpenAiChatModelProviderFactory
 
   public AzureOpenAiChatModelProviderFactory(ObjectProvider<OpenAiChatModel> models) {
     super("AZURE", models::getIfAvailable);
+  }
+
+  @Override
+  public OpenAiChatModel create(ProviderModelConfiguration configuration) {
+    OpenAiChatOptions.Builder options =
+        OpenAiChatOptions.builder()
+            .model(configuration.model())
+            .azure(true)
+            .deploymentName(
+                configuration.deployment() == null
+                    ? configuration.model()
+                    : configuration.deployment());
+    if (configuration.url() != null) options.baseUrl(configuration.url());
+    if (configuration.apiVersion() != null)
+      options.azureOpenAIServiceVersion(
+          AzureOpenAIServiceVersion.fromString(configuration.apiVersion()));
+    String apiKey = configuration.authValue("apiKey", "api_key", "token");
+    if (apiKey != null) options.apiKey(apiKey);
+    return OpenAiChatModel.builder().options(options.build()).build();
   }
 }

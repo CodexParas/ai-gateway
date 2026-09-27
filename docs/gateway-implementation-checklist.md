@@ -62,9 +62,9 @@ Expected routes include:
 - [x] Reject malformed or invalid model configuration.
 - [x] Make model resolution route-aware where the protocol uses path model identifiers.
 - [x] Ensure credential scope validation runs after model resolution.
-- [ ] Apply per-model endpoint, region, deployment, and API version settings.
-- [ ] Apply per-model authentication settings to provider model creation.
-- [ ] Apply per-model request options to the Spring AI model.
+- [x] Apply per-model endpoint, region, deployment, and API version settings.
+- [x] Apply per-model authentication settings to provider model creation.
+- [x] Apply per-model request options to the Spring AI model.
 
 ## 4. Provider request validation
 
@@ -93,7 +93,7 @@ Expected routes include:
 - [x] Add Bedrock Converse provider factory.
 - [x] Add Google GenAI provider factory.
 - [x] Add Azure/OpenAI-compatible provider factory.
-- [ ] Create provider models dynamically from Redis configuration.
+- [x] Create provider models dynamically from Redis configuration.
 - [x] Avoid relying on ThreadLocal state across asynchronous stream callbacks.
 - [x] Capture model and request context explicitly for asynchronous execution.
 
