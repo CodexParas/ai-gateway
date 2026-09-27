@@ -1,52 +1,40 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://codexparas.com/schemas/ai-gateway/provider-config.schema.json",
-  "title": "AI Gateway Provider Configuration",
-  "description": "A provider-neutral configuration for one logical AI model deployment behind the gateway. Secrets must be supplied through a secret manager or environment-backed reference, never as literal values.",
+  "title": "AI Gateway Redis Model Configuration",
+  "description": "The JSON value stored in the Redis model-configuration hash. The Redis hash field is the requested model name and must match model.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "provider", "model", "auth", "request", "guardrails"],
+  "required": ["provider", "model", "auth", "guardrails"],
   "properties": {
-    "id": {
-      "type": "string",
-      "description": "Stable identifier used by routes and clients.",
-      "pattern": "^[a-z][a-z0-9._-]{1,63}$"
-    },
-    "displayName": {
-      "type": "string",
-      "maxLength": 120
-    },
-    "enabled": {
-      "type": "boolean",
-      "default": true
-    },
     "provider": {
       "type": "string",
       "enum": ["OPENAI", "ANTHROPIC", "BEDROCK", "GOOGLE", "AZURE"]
     },
     "model": {
       "type": "string",
-      "description": "Provider model name or Bedrock model ID.",
       "minLength": 1,
-      "maxLength": 200
+      "maxLength": 200,
+      "description": "Must equal the Redis hash field used for this lookup."
     },
     "url": {
       "type": ["string", "null"],
-      "format": "uri",
-      "description": "Optional custom endpoint, proxy, or compatible API base URL."
+      "format": "uri"
     },
     "region": {
       "type": ["string", "null"],
-      "description": "Cloud region; required for BEDROCK and commonly used for AZURE deployments.",
       "pattern": "^[a-z0-9-]+$"
     },
     "deployment": {
-      "type": ["string", "null"],
-      "description": "Azure deployment name."
+      "type": ["string", "null"]
     },
     "apiVersion": {
-      "type": ["string", "null"],
-      "description": "Provider API version, for example an Anthropic or Azure API version."
+      "type": ["string", "null"]
+    },
+    "enabled": {
+      "type": "boolean",
+      "const": true,
+      "default": true
     },
     "auth": {
       "$ref": "#/$defs/auth"
@@ -56,89 +44,16 @@
     },
     "guardrails": {
       "type": "array",
-      "description": "Ordered policies evaluated before and/or after the provider call.",
       "items": {
         "$ref": "#/$defs/guardrail"
       }
     },
-    "routing": {
-      "$ref": "#/$defs/routing"
-    },
-    "resilience": {
-      "$ref": "#/$defs/resilience"
-    },
-    "observability": {
-      "$ref": "#/$defs/observability"
-    },
-    "limits": {
-      "$ref": "#/$defs/limits"
-    },
     "metadata": {
       "type": "object",
-      "additionalProperties": {
-        "type": ["string", "number", "boolean"]
-      }
+      "additionalProperties": true
     }
   },
-  "allOf": [
-    {
-      "if": { "properties": { "provider": { "const": "BEDROCK" } } },
-      "then": {
-        "required": ["region"],
-        "properties": {
-          "auth": {
-            "properties": {
-              "type": { "enum": ["AWS_CREDENTIALS", "ROLE", "WORKLOAD_IDENTITY"] }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "provider": { "const": "AZURE" } } },
-      "then": {
-        "required": ["url", "deployment", "apiVersion"],
-        "properties": {
-          "auth": {
-            "properties": {
-              "type": { "enum": ["API_KEY", "AZURE_MANAGED_IDENTITY", "OAUTH2"] }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "provider": { "enum": ["OPENAI", "ANTHROPIC", "GOOGLE"] } } },
-      "then": {
-        "properties": {
-          "auth": {
-            "properties": {
-              "type": { "enum": ["API_KEY", "OAUTH2"] }
-            }
-          }
-        }
-      }
-    }
-  ],
   "$defs": {
-    "secretReference": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["source", "key"],
-      "properties": {
-        "source": {
-          "type": "string",
-          "enum": ["ENVIRONMENT", "VAULT", "AWS_SECRETS_MANAGER", "GCP_SECRET_MANAGER", "AZURE_KEY_VAULT", "KMS"]
-        },
-        "key": {
-          "type": "string",
-          "minLength": 1
-        },
-        "version": {
-          "type": ["string", "null"]
-        }
-      }
-    },
     "auth": {
       "type": "object",
       "additionalProperties": false,
@@ -146,67 +61,109 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["API_KEY", "OAUTH2", "AWS_CREDENTIALS", "ROLE", "WORKLOAD_IDENTITY", "AZURE_MANAGED_IDENTITY"]
+          "enum": [
+            "API_KEY",
+            "OAUTH2",
+            "AWS_CREDENTIALS",
+            "ROLE",
+            "WORKLOAD_IDENTITY",
+            "AZURE_MANAGED_IDENTITY"
+          ]
         },
         "apiKey": {
-          "$ref": "#/$defs/secretReference"
-        },
-        "clientId": {
-          "$ref": "#/$defs/secretReference"
-        },
-        "clientSecret": {
-          "$ref": "#/$defs/secretReference"
-        },
-        "tokenUrl": {
           "type": ["string", "null"],
-          "format": "uri"
+          "minLength": 1
         },
-        "scope": {
+        "api_key": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "token": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "accessKeyId": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "access_key_id": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "secretAccessKey": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "secret_access_key": {
+          "type": ["string", "null"],
+          "minLength": 1
+        },
+        "sessionToken": {
           "type": ["string", "null"]
         },
         "roleArn": {
-          "type": ["string", "null"]
+          "type": ["string", "null"],
+          "minLength": 1
         },
-        "accessKeyId": {
-          "$ref": "#/$defs/secretReference"
+        "project": {
+          "type": ["string", "null"],
+          "minLength": 1
         },
-        "secretAccessKey": {
-          "$ref": "#/$defs/secretReference"
+        "projectId": {
+          "type": ["string", "null"],
+          "minLength": 1
         },
-        "sessionToken": {
-          "$ref": "#/$defs/secretReference"
+        "project_id": {
+          "type": ["string", "null"],
+          "minLength": 1
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "type": { "const": "API_KEY" } } },
-          "then": { "required": ["apiKey"] }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "API_KEY"
+              }
+            }
+          },
+          "then": {
+            "required": ["apiKey"]
+          }
         },
         {
-          "if": { "properties": { "type": { "const": "OAUTH2" } } },
-          "then": { "required": ["clientId", "clientSecret", "tokenUrl"] }
-        },
-        {
-          "if": { "properties": { "type": { "const": "ROLE" } } },
-          "then": { "required": ["roleArn"] }
-        },
-        {
-          "if": { "properties": { "type": { "const": "AWS_CREDENTIALS" } } },
-          "then": { "required": ["accessKeyId", "secretAccessKey"] }
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ROLE"
+              }
+            }
+          },
+          "then": {
+            "required": ["roleArn"]
+          }
         }
       ]
     },
     "request": {
       "type": "object",
-      "additionalProperties": false,
+      "additionalProperties": true,
       "properties": {
         "protocol": {
           "type": "string",
-          "enum": ["CHAT", "RESPONSES", "CONVERSE", "GENERATE_CONTENT", "EMBEDDINGS", "AUDIO", "TRANSCRIPTION"]
+          "enum": [
+            "CHAT",
+            "RESPONSES",
+            "CONVERSE",
+            "GENERATE_CONTENT",
+            "EMBEDDINGS",
+            "AUDIO",
+            "TRANSCRIPTION"
+          ]
         },
-        "maxTokens": {
-          "type": ["integer", "null"],
-          "minimum": 1
+        "fallbackModel": {
+          "type": "string",
+          "minLength": 1
         },
         "temperature": {
           "type": ["number", "null"],
@@ -218,22 +175,77 @@
           "minimum": 0,
           "maximum": 1
         },
-        "timeoutMs": {
-          "type": "integer",
-          "minimum": 100,
-          "default": 60000
+        "top_p": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1
         },
-        "streaming": {
-          "type": "boolean",
-          "default": false
+        "frequency_penalty": {
+          "type": ["number", "null"]
+        },
+        "presence_penalty": {
+          "type": ["number", "null"]
+        },
+        "max_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "max_completion_tokens": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "top_k": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "stop": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          ]
+        },
+        "stop_sequences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "stream": {
+          "type": "boolean"
+        },
+        "response_format": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "toolConfig": {
+          "type": "object",
+          "additionalProperties": true
         },
         "extraHeaders": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "extraBody": {
           "type": "object",
-          "description": "Provider-specific non-secret request fields.",
           "additionalProperties": true
         }
       }
@@ -249,7 +261,16 @@
         },
         "type": {
           "type": "string",
-          "enum": ["PII_REDACTION", "PROMPT_INJECTION", "TOXICITY", "JAILBREAK", "CONTENT_SAFETY", "DLP", "JSON_SCHEMA", "CUSTOM"]
+          "enum": [
+            "PII_REDACTION",
+            "PROMPT_INJECTION",
+            "TOXICITY",
+            "JAILBREAK",
+            "CONTENT_SAFETY",
+            "DLP",
+            "JSON_SCHEMA",
+            "CUSTOM"
+          ]
         },
         "stage": {
           "type": "string",
@@ -266,85 +287,6 @@
           "type": "object",
           "additionalProperties": true
         }
-      }
-    },
-    "routing": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "priority": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 100
-        },
-        "weight": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100
-        },
-        "capabilities": {
-          "type": "array",
-          "items": { "type": "string" },
-          "uniqueItems": true
-        },
-        "tenantAllowList": {
-          "type": "array",
-          "items": { "type": "string" },
-          "uniqueItems": true
-        }
-      }
-    },
-    "resilience": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxRetries": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 10,
-          "default": 2
-        },
-        "backoffMs": {
-          "type": "integer",
-          "minimum": 0,
-          "default": 250
-        },
-        "circuitBreaker": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "failureRatePercent": { "type": "number", "minimum": 1, "maximum": 100 },
-            "openStateMs": { "type": "integer", "minimum": 1000 }
-          }
-        },
-        "fallbackProviderIds": {
-          "type": "array",
-          "items": { "type": "string" },
-          "uniqueItems": true
-        }
-      }
-    },
-    "observability": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "emitEvents": { "type": "boolean", "default": true },
-        "logPrompts": { "type": "boolean", "default": false },
-        "logResponses": { "type": "boolean", "default": false },
-        "traceSamplingPercent": { "type": "number", "minimum": 0, "maximum": 100, "default": 100 },
-        "metricsNamespace": { "type": "string" }
-      }
-    },
-    "limits": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "requestsPerMinute": { "type": ["integer", "null"], "minimum": 1 },
-        "tokensPerMinute": { "type": ["integer", "null"], "minimum": 1 },
-        "maxInputTokens": { "type": ["integer", "null"], "minimum": 1 },
-        "maxOutputTokens": { "type": ["integer", "null"], "minimum": 1 },
-        "monthlyCostLimit": { "type": ["number", "null"], "minimum": 0, "description": "Limit in the configured billing currency." },
-        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
       }
     }
   }
