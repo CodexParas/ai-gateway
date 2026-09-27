@@ -43,7 +43,8 @@ public record GatewayAuditEvent(
       int retryCount,
       boolean fallbackUsed,
       String upstreamRequestId,
-      String streamTermination) {}
+      String streamTermination,
+      Long timeToFirstTokenMs) {}
 
   public record GuardrailSummary(
       List<String> configured, List<String> evaluated, String decision, boolean blocked) {}

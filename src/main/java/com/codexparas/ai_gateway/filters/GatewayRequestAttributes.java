@@ -14,6 +14,9 @@ public final class GatewayRequestAttributes {
       GatewayRequestAttributes.class.getName() + ".chatResponseStream";
   public static final String PROVIDER_REQUEST_ID =
       GatewayRequestAttributes.class.getName() + ".providerRequestId";
+  public static final String USAGE = GatewayRequestAttributes.class.getName() + ".usage";
+  public static final String STREAM_FIRST_TOKEN_AT =
+      GatewayRequestAttributes.class.getName() + ".streamFirstTokenAt";
   public static final String STREAM_TERMINATION =
       GatewayRequestAttributes.class.getName() + ".streamTermination";
   public static final String PREPARED_CHAT_MODEL =

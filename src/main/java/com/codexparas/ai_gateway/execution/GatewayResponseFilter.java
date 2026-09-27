@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
       return;
     }
     ProviderResponse providerResponse = transformer.transform(route, chatResponse);
-    storeProviderRequestId(request, chatResponse);
+    storeResponseMetadata(request, chatResponse);
     response.setStatus(HttpServletResponse.SC_OK);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getWriter(), providerResponse.body());
@@ -121,7 +122,10 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     Disposable subscription =
         stream.subscribe(
             chunk -> {
-              storeProviderRequestId(request, chunk);
+              if (request.getAttribute(GatewayRequestAttributes.STREAM_FIRST_TOKEN_AT) == null) {
+                request.setAttribute(GatewayRequestAttributes.STREAM_FIRST_TOKEN_AT, Instant.now());
+              }
+              storeResponseMetadata(request, chunk);
               writeChunk(writer, transformer.transformChunk(route, chunk));
             },
             error -> completeWithError(request, route, asyncContext, writer, error),
@@ -203,11 +207,26 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     return ((StreamingResponseTransformer) transformer).provider();
   }
 
-  private static void storeProviderRequestId(HttpServletRequest request, ChatResponse response) {
+  private static void storeResponseMetadata(HttpServletRequest request, ChatResponse response) {
     if (response.getMetadata() != null && response.getMetadata().getId() != null) {
       request.setAttribute(
           GatewayRequestAttributes.PROVIDER_REQUEST_ID, response.getMetadata().getId());
     }
+    if (response.getMetadata() != null && response.getMetadata().getUsage() != null) {
+      org.springframework.ai.chat.metadata.Usage usage = response.getMetadata().getUsage();
+      request.setAttribute(
+          GatewayRequestAttributes.USAGE,
+          new com.codexparas.ai_gateway.logging.GatewayAuditEvent.Usage(
+              nullableLong(usage.getPromptTokens()),
+              nullableLong(usage.getCompletionTokens()),
+              nullableLong(usage.getTotalTokens()),
+              null,
+              null));
+    }
+  }
+
+  private static Long nullableLong(Integer value) {
+    return value == null ? null : value.longValue();
   }
 
   private static Throwable normalizeStreamError(

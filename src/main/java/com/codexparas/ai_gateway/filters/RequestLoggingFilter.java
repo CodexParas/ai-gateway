@@ -148,13 +148,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                 0,
                 false,
                 (String) request.getAttribute(GatewayRequestAttributes.PROVIDER_REQUEST_ID),
-                (String) request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION)),
+                (String) request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION),
+                timeToFirstTokenMs(request, started)),
             new GatewayAuditEvent.GuardrailSummary(
                 configured,
                 decision == null ? List.of() : decision.evaluated(),
                 decision == null ? "NOT_EVALUATED" : decision.decision(),
                 decision != null && decision.blocked()),
-            new GatewayAuditEvent.Usage(null, null, null, null, null),
+            usage(request),
             error == null
                 ? null
                 : new GatewayAuditEvent.ErrorInfo(
@@ -181,6 +182,18 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         responseDecision.blocked() ? "BLOCK" : requestDecision.decision(),
         requestDecision.blocked() || responseDecision.blocked(),
         responseDecision.transformedBody());
+  }
+
+  private static GatewayAuditEvent.Usage usage(HttpServletRequest request) {
+    GatewayAuditEvent.Usage usage =
+        (GatewayAuditEvent.Usage) request.getAttribute(GatewayRequestAttributes.USAGE);
+    return usage == null ? new GatewayAuditEvent.Usage(null, null, null, null, null) : usage;
+  }
+
+  private static Long timeToFirstTokenMs(HttpServletRequest request, Instant started) {
+    Instant firstToken =
+        (Instant) request.getAttribute(GatewayRequestAttributes.STREAM_FIRST_TOKEN_AT);
+    return firstToken == null ? null : Duration.between(started, firstToken).toMillis();
   }
 
   private final class CompletionListener implements AsyncListener {

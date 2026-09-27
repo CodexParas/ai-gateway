@@ -25,35 +25,35 @@ Legend:
 - [x] Spring AI `ChatModel` preparation filter.
 - [x] Request guardrail filter.
 - [x] Request transformation filter/service SPI.
-- [~] Spring AI request execution filter.
-- [~] Response transformation filter/service.
+- [x] Spring AI request execution filter.
+- [x] Response transformation filter/service.
 - [x] Response guardrail filter.
-- [~] Provider-compatible response writer.
-- [~] Streaming/SSE response writer.
+- [x] Provider-compatible response writer.
+- [x] Streaming/SSE response writer.
 - [x] Completion logging and Kafka publication.
 - [x] Filter-level exception boundary.
 
 ## 2. Route and protocol resolution
 
-- [ ] Define `GatewayRoute` with provider, operation, and streaming mode.
-- [ ] Resolve provider from incoming path and protocol.
-- [ ] Resolve operation from path and HTTP method.
-- [ ] Detect streaming mode from request body, query parameters, or headers.
-- [ ] Reject unsupported or ambiguous paths.
-- [ ] Preserve route metadata for logging and execution.
+- [x] Define `GatewayRoute` with provider, operation, and streaming mode.
+- [x] Resolve provider from incoming path and protocol.
+- [~] Resolve operation from path and HTTP method.
+- [x] Detect streaming mode from request body, query parameters, or headers.
+- [x] Reject unsupported or ambiguous paths.
+- [x] Preserve route metadata for logging and execution.
 
 Expected routes include:
 
-- [ ] OpenAI-compatible chat completions.
-- [ ] OpenAI responses.
-- [ ] Anthropic messages.
-- [ ] Google GenAI generate content.
-- [ ] Bedrock Converse.
-- [ ] Azure/OpenAI-compatible chat completions.
+- [x] OpenAI-compatible chat completions.
+- [x] OpenAI responses.
+- [x] Anthropic messages.
+- [x] Google GenAI generate content.
+- [x] Bedrock Converse.
+- [x] Azure/OpenAI-compatible chat completions.
 
 ## 3. Model resolution and configuration
 
-- [~] Extract requested model from request path or body.
+- [x] Extract requested model from request path or body.
 - [x] Combine model extraction with Redis model configuration lookup.
 - [x] Resolve Redis hash entry by model name.
 - [x] Raise a model-not-found error when the hash field is absent.
@@ -94,8 +94,8 @@ Expected routes include:
 - [x] Add Google GenAI provider factory.
 - [x] Add Azure/OpenAI-compatible provider factory.
 - [ ] Create provider models dynamically from Redis configuration.
-- [ ] Avoid relying on ThreadLocal state across asynchronous stream callbacks.
-- [ ] Capture model and request context explicitly for asynchronous execution.
+- [x] Avoid relying on ThreadLocal state across asynchronous stream callbacks.
+- [x] Capture model and request context explicitly for asynchronous execution.
 
 ## 6. Request transformers
 
@@ -126,12 +126,12 @@ Provider request JSON
 - [x] Define execution context containing route, credentials, prepared model, and transformed request.
 - [x] Implement non-streaming execution using `ChatModel.call(prompt)`.
 - [x] Implement streaming execution using `ChatModel.stream(prompt)`.
-- [ ] Capture provider response metadata.
-- [ ] Capture token usage when available.
+- [x] Capture provider response metadata.
+- [x] Capture token usage when available.
 - [x] Capture provider request/correlation IDs.
-- [ ] Apply timeout and cancellation behavior.
-- [ ] Map provider exceptions to gateway exceptions.
-- [ ] Track time-to-first-token and total stream duration.
+- [x] Apply timeout and cancellation behavior.
+- [x] Map provider exceptions to gateway exceptions.
+- [x] Track time-to-first-token and total stream duration.
 
 ## 8. Response transformers
 
@@ -200,10 +200,10 @@ ChatResponse / streamed ChatResponse
 - [x] Trusted organization/application identity in logs.
 - [x] Model and provider metadata in logs.
 - [x] Guardrail decision summary in logs.
-- [ ] Provider request ID in logs.
-- [ ] Token usage in logs.
-- [ ] Time-to-first-token in logs.
-- [ ] Stream cancellation state in logs.
+- [x] Provider request ID in logs.
+- [x] Token usage in logs.
+- [x] Time-to-first-token in logs.
+- [x] Stream cancellation state in logs.
 - [ ] Retry and fallback metadata in logs.
 - [ ] Final provider status/error code in logs.
 
