@@ -220,10 +220,10 @@ ChatResponse / streamed ChatResponse
 - [x] Route resolution unit tests.
 - [x] Model resolution and validation tests.
 - [x] Credential and scope tests.
-- [ ] Provider request validator tests.
-- [ ] Provider factory tests.
+- [x] Provider request validator tests.
+- [x] Provider factory tests.
 - [x] Request transformer tests.
-- [ ] Non-streaming execution tests.
+- [x] Non-streaming execution tests.
 - [x] Response transformer tests.
 - [x] Request guardrail tests.
 - [ ] Response guardrail tests.
