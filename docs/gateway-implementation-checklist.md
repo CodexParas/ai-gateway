@@ -209,8 +209,8 @@ ChatResponse / streamed ChatResponse
 
 ## 13. Controller-free gateway transition
 
-- [ ] Add catch-all gateway routing entry point.
-- [ ] Route all supported provider paths through the filter pipeline.
+- [x] Add catch-all gateway routing entry point.
+- [x] Route all supported provider paths through the filter pipeline.
 - [ ] Remove provider-specific controller dependency from the target execution path.
 - [ ] Retain provider services only as adapters where still required.
 - [ ] Remove or deprecate duplicate controller execution paths.
