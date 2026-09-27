@@ -37,6 +37,15 @@ public class ModelResolutionFilter extends OncePerRequestFilter {
     this.objectMapper = objectMapper;
   }
 
+  private static String resolveFromPath(HttpServletRequest request) {
+    Matcher matcher = PATH_MODEL.matcher(request.getRequestURI());
+    return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : null;
+  }
+
+  private static boolean requiresModel(GatewayRoute route) {
+    return !route.operation().equals("models");
+  }
+
   @Override
   protected void doFilterInternal(
       @NonNull HttpServletRequest request,
@@ -49,10 +58,19 @@ public class ModelResolutionFilter extends OncePerRequestFilter {
       return;
     }
 
-    String model = resolveFromPathOrQuery(request);
-    if (model == null) {
-      model = resolveFromBody(request);
+    String routeModel = resolveFromPath(request);
+    String requestModel = resolveFromBody(request);
+    if (routeModel != null && requestModel != null && !routeModel.equals(requestModel)) {
+      writeError(
+          response,
+          HttpServletResponse.SC_BAD_REQUEST,
+          "model_mismatch",
+          "The path model and request body model must match",
+          List.of(routeModel, requestModel));
+      return;
     }
+    String model = routeModel != null ? routeModel : requestModel;
+    if (model == null) model = request.getParameter("model");
     if (model == null || model.isBlank()) {
       writeError(
           response,
@@ -99,21 +117,10 @@ public class ModelResolutionFilter extends OncePerRequestFilter {
     try {
       JsonNode json = objectMapper.readTree(body);
       JsonNode model = json.path("model");
-      return model.isTextual() ? model.asString() : null;
+      return model.isString() ? model.asString() : null;
     } catch (Exception exception) {
       return null;
     }
-  }
-
-  private static String resolveFromPathOrQuery(HttpServletRequest request) {
-    String queryModel = request.getParameter("model");
-    if (queryModel != null && !queryModel.isBlank()) return queryModel;
-    Matcher matcher = PATH_MODEL.matcher(request.getRequestURI());
-    return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : null;
-  }
-
-  private static boolean requiresModel(GatewayRoute route) {
-    return !route.operation().equals("models");
   }
 
   private void writeError(

@@ -37,7 +37,7 @@ Legend:
 
 - [x] Define `GatewayRoute` with provider, operation, and streaming mode.
 - [x] Resolve provider from incoming path and protocol.
-- [~] Resolve operation from path and HTTP method.
+- [x] Resolve operation from path and HTTP method.
 - [x] Detect streaming mode from request body, query parameters, or headers.
 - [x] Reject unsupported or ambiguous paths.
 - [x] Preserve route metadata for logging and execution.
@@ -75,10 +75,10 @@ Expected routes include:
 - [x] Add Google request validator.
 - [x] Add Azure request validator.
 - [x] Validate required protocol fields.
-- [ ] Validate path/model consistency.
+- [x] Validate path/model consistency.
 - [x] Validate streaming flags.
 - [x] Validate supported message/content formats.
-- [ ] Validate provider-specific options.
+- [x] Validate provider-specific options.
 - [x] Return consistent validation errors.
 
 ## 5. Spring AI model preparation
@@ -110,7 +110,7 @@ Expected routes include:
 - [x] Add Bedrock request transformer.
 - [x] Add Google request transformer.
 - [x] Add Azure request transformer.
-- [ ] Validate unsupported options before execution.
+- [x] Validate unsupported options before execution.
 
 Target transformation:
 

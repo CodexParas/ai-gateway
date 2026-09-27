@@ -50,6 +50,11 @@ public class GatewayRouteFilter extends OncePerRequestFilter {
       return;
     }
 
+    if (!supportsMethod(route, request.getMethod())) {
+      writeMethodNotAllowed(response, route, request.getMethod());
+      return;
+    }
+
     request.setAttribute(GatewayRequestAttributes.ROUTE, route);
     chain.doFilter(request, response);
   }
@@ -117,6 +122,11 @@ public class GatewayRouteFilter extends OncePerRequestFilter {
         && accept.toLowerCase(Locale.ROOT).contains(MediaType.TEXT_EVENT_STREAM_VALUE);
   }
 
+  private static boolean supportsMethod(GatewayRoute route, String method) {
+    if ("models".equals(route.operation())) return "GET".equalsIgnoreCase(method);
+    return "POST".equalsIgnoreCase(method);
+  }
+
   private static String normalize(String uri) {
     if (uri == null || uri.isBlank()) return "/";
     String path = uri.length() > 1 && uri.endsWith("/") ? uri.substring(0, uri.length() - 1) : uri;
@@ -146,5 +156,23 @@ public class GatewayRouteFilter extends OncePerRequestFilter {
             "error", "unsupported_route",
             "message", "No gateway route matches the request",
             "path", request.getRequestURI()));
+  }
+
+  private void writeMethodNotAllowed(
+      HttpServletResponse response, GatewayRoute route, String method) throws IOException {
+    response.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+    response.setHeader("Allow", "models".equals(route.operation()) ? "GET" : "POST");
+    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+    objectMapper.writeValue(
+        response.getWriter(),
+        java.util.Map.of(
+            "error",
+            "method_not_allowed",
+            "message",
+            "HTTP method is not supported for this gateway operation",
+            "operation",
+            route.operation(),
+            "method",
+            method));
   }
 }
