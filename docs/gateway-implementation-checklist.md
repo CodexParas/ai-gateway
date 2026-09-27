@@ -218,14 +218,14 @@ ChatResponse / streamed ChatResponse
 ## 14. Testing
 
 - [x] Route resolution unit tests.
-- [ ] Model resolution and validation tests.
-- [ ] Credential and scope tests.
+- [x] Model resolution and validation tests.
+- [x] Credential and scope tests.
 - [ ] Provider request validator tests.
 - [ ] Provider factory tests.
 - [x] Request transformer tests.
 - [ ] Non-streaming execution tests.
 - [x] Response transformer tests.
-- [ ] Request guardrail tests.
+- [x] Request guardrail tests.
 - [ ] Response guardrail tests.
 - [ ] SSE chunk and cancellation tests.
 - [ ] Filter ordering tests.
