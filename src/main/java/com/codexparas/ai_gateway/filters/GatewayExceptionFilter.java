@@ -39,16 +39,28 @@ public class GatewayExceptionFilter extends OncePerRequestFilter {
       chain.doFilter(request, response);
     } catch (RuntimeException exception) {
       request.setAttribute(GatewayRequestAttributes.ERROR, exception);
+      recordProviderFailure(request, exception);
       if (response.isCommitted()) throw exception;
       writeError(response, exception);
     } catch (ServletException exception) {
       request.setAttribute(GatewayRequestAttributes.ERROR, exception);
+      recordProviderFailure(request, exception);
       if (response.isCommitted()) throw exception;
       writeError(response, exception);
     } catch (IOException exception) {
       request.setAttribute(GatewayRequestAttributes.ERROR, exception);
+      recordProviderFailure(request, exception);
       if (response.isCommitted()) throw exception;
       writeError(response, exception);
+    }
+  }
+
+  private static void recordProviderFailure(HttpServletRequest request, Exception exception) {
+    if (exception instanceof ProviderExecutionException) {
+      request.setAttribute(
+          GatewayRequestAttributes.PROVIDER_STATUS, HttpServletResponse.SC_BAD_GATEWAY);
+      request.setAttribute(
+          GatewayRequestAttributes.PROVIDER_ERROR_CODE, "provider_execution_failed");
     }
   }
 

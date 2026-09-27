@@ -14,6 +14,13 @@ public final class GatewayRequestAttributes {
       GatewayRequestAttributes.class.getName() + ".chatResponseStream";
   public static final String PROVIDER_REQUEST_ID =
       GatewayRequestAttributes.class.getName() + ".providerRequestId";
+  public static final String PROVIDER_STATUS =
+      GatewayRequestAttributes.class.getName() + ".providerStatus";
+  public static final String PROVIDER_ERROR_CODE =
+      GatewayRequestAttributes.class.getName() + ".providerErrorCode";
+  public static final String RETRY_COUNT = GatewayRequestAttributes.class.getName() + ".retryCount";
+  public static final String FALLBACK_USED =
+      GatewayRequestAttributes.class.getName() + ".fallbackUsed";
   public static final String USAGE = GatewayRequestAttributes.class.getName() + ".usage";
   public static final String STREAM_FIRST_TOKEN_AT =
       GatewayRequestAttributes.class.getName() + ".streamFirstTokenAt";

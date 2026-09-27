@@ -145,11 +145,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
                 httpStatus,
                 Duration.between(started, completed).toMillis(),
                 null,
-                0,
-                false,
+                integerAttribute(request, GatewayRequestAttributes.RETRY_COUNT, 0),
+                booleanAttribute(request, GatewayRequestAttributes.FALLBACK_USED),
                 (String) request.getAttribute(GatewayRequestAttributes.PROVIDER_REQUEST_ID),
                 (String) request.getAttribute(GatewayRequestAttributes.STREAM_TERMINATION),
-                timeToFirstTokenMs(request, started)),
+                timeToFirstTokenMs(request, started),
+                integerAttributeOrNull(request, GatewayRequestAttributes.PROVIDER_STATUS),
+                (String) request.getAttribute(GatewayRequestAttributes.PROVIDER_ERROR_CODE)),
             new GatewayAuditEvent.GuardrailSummary(
                 configured,
                 decision == null ? List.of() : decision.evaluated(),
@@ -159,7 +161,10 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             error == null
                 ? null
                 : new GatewayAuditEvent.ErrorInfo(
-                    error.getClass().getSimpleName(), null, safeMessage(error), httpStatus >= 500),
+                    error.getClass().getSimpleName(),
+                    (String) request.getAttribute(GatewayRequestAttributes.PROVIDER_ERROR_CODE),
+                    safeMessage(error),
+                    httpStatus >= 500),
             new GatewayAuditEvent.Retention(
                 completed.plus(Duration.ofDays(properties.purgeDays()))));
     auditPublisher.publish(event);
@@ -194,6 +199,20 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     Instant firstToken =
         (Instant) request.getAttribute(GatewayRequestAttributes.STREAM_FIRST_TOKEN_AT);
     return firstToken == null ? null : Duration.between(started, firstToken).toMillis();
+  }
+
+  private static int integerAttribute(HttpServletRequest request, String name, int fallback) {
+    Object value = request.getAttribute(name);
+    return value instanceof Number number ? number.intValue() : fallback;
+  }
+
+  private static Integer integerAttributeOrNull(HttpServletRequest request, String name) {
+    Object value = request.getAttribute(name);
+    return value instanceof Number number ? number.intValue() : null;
+  }
+
+  private static boolean booleanAttribute(HttpServletRequest request, String name) {
+    return Boolean.TRUE.equals(request.getAttribute(name));
   }
 
   private final class CompletionListener implements AsyncListener {

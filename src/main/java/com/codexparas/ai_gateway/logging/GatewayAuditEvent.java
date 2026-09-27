@@ -44,7 +44,9 @@ public record GatewayAuditEvent(
       boolean fallbackUsed,
       String upstreamRequestId,
       String streamTermination,
-      Long timeToFirstTokenMs) {}
+      Long timeToFirstTokenMs,
+      Integer providerStatus,
+      String providerErrorCode) {}
 
   public record GuardrailSummary(
       List<String> configured, List<String> evaluated, String decision, boolean blocked) {}

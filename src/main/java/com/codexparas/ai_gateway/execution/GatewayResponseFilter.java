@@ -91,6 +91,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     ProviderResponse providerResponse = transformer.transform(route, chatResponse);
     storeResponseMetadata(request, chatResponse);
     response.setStatus(HttpServletResponse.SC_OK);
+    request.setAttribute(GatewayRequestAttributes.PROVIDER_STATUS, HttpServletResponse.SC_OK);
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
     objectMapper.writeValue(response.getWriter(), providerResponse.body());
   }
@@ -110,6 +111,7 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     }
 
     response.setStatus(HttpServletResponse.SC_OK);
+    request.setAttribute(GatewayRequestAttributes.PROVIDER_STATUS, HttpServletResponse.SC_OK);
     response.setContentType(MediaType.TEXT_EVENT_STREAM_VALUE);
     response.setCharacterEncoding(StandardCharsets.UTF_8.name());
     response.setHeader("Cache-Control", "no-cache");
@@ -173,6 +175,13 @@ public class GatewayResponseFilter extends OncePerRequestFilter {
     request.setAttribute(GatewayRequestAttributes.ERROR, normalized);
     request.setAttribute(
         GatewayRequestAttributes.STREAM_TERMINATION, streamTermination(normalized));
+    request.setAttribute(
+        GatewayRequestAttributes.PROVIDER_ERROR_CODE,
+        normalized instanceof GuardrailViolationException
+            ? "response_guardrail_blocked"
+            : normalized instanceof TimeoutException
+                ? "stream_timeout"
+                : "stream_execution_failed");
     synchronized (writer) {
       if (!writer.checkError()) {
         String code =

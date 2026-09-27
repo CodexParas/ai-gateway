@@ -205,7 +205,7 @@ ChatResponse / streamed ChatResponse
 - [x] Time-to-first-token in logs.
 - [x] Stream cancellation state in logs.
 - [ ] Retry and fallback metadata in logs.
-- [ ] Final provider status/error code in logs.
+- [x] Final provider status/error code in logs.
 
 ## 13. Controller-free gateway transition
 
