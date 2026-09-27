@@ -26,30 +26,6 @@ ai:
   gateway:
     execution:
       max-attempts: 1
-    openai:
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com}
-      api-key: ${OPENAI_API_KEY:}
-    anthropic:
-      base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
-      api-key: ${ANTHROPIC_API_KEY:}
-      version: ${ANTHROPIC_VERSION:2023-06-01}
-    gemini:
-      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
-      api-key: ${GEMINI_API_KEY:}
-      api-version: ${GEMINI_API_VERSION:v1beta}
-    bedrock:
-      region: ${AWS_REGION:us-east-1}
-    azure-ai:
-      endpoint: ${AZURE_AI_ENDPOINT:https://YOUR-RESOURCE.services.ai.azure.com/models}
-      api-key: ${AZURE_AI_API_KEY:}
-      api-version: ${AZURE_AI_API_VERSION:2025-04-01}
-    routes:
-      claude-code-default:
-        provider: openai
-        upstream-model: gpt-5
-      gpt-5:
-        provider: openai
-        upstream-model: gpt-5
     observability:
       kafka-enabled: ${AI_GATEWAY_KAFKA_ENABLED:false}
       topic: ${AI_GATEWAY_EVENTS_TOPIC:ai-gateway.events}
