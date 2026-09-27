@@ -17,6 +17,7 @@ import reactor.core.publisher.Mono;
 
 @Validated
 @RestController
+@Deprecated(forRemoval = false)
 @RequestMapping("/api/v1/bedrock")
 public class BedrockController {
 

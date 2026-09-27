@@ -21,6 +21,7 @@ import reactor.core.publisher.Mono;
 
 @Validated
 @RestController
+@Deprecated(forRemoval = false)
 @RequestMapping({"/api/v1/gemini", "/v1beta"})
 public class GeminiController {
 

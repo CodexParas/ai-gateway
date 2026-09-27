@@ -213,7 +213,7 @@ ChatResponse / streamed ChatResponse
 - [x] Route all supported provider paths through the filter pipeline.
 - [x] Remove provider-specific controller dependency from the target execution path.
 - [x] Retain provider services only as adapters where still required.
-- [~] Remove or deprecate duplicate controller execution paths; legacy routes remain for compatibility.
+- [x] Remove or deprecate duplicate controller execution paths; legacy routes remain deprecated for compatibility.
 
 ## 14. Testing
 

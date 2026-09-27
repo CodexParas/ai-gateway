@@ -16,6 +16,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
+@Deprecated(forRemoval = false)
 @RequestMapping("/api/v1/azure-ai")
 public class AzureAiController {
 
