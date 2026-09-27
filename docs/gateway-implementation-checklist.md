@@ -227,7 +227,7 @@ ChatResponse / streamed ChatResponse
 - [x] Response transformer tests.
 - [x] Request guardrail tests.
 - [x] Response guardrail tests.
-- [ ] SSE chunk and cancellation tests.
+- [~] SSE chunk coverage is present; container-level cancellation requires a real Servlet async container test.
 - [x] Filter ordering tests.
 - [x] Filter-level exception tests.
 - [ ] End-to-end controller-free gateway tests.
