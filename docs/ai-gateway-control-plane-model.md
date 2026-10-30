@@ -13,8 +13,10 @@ That schema is intentionally limited to fields the runtime currently reads:
 provider selection, provider credentials, request defaults, fallback model,
 and guardrails.
 
-The implementation work for this future layer is tracked in
-`docs/ai-gateway-control-plane-checklist.md`.
+The configurator-service implementation work for this future layer is tracked
+in `docs/ai-gateway-control-plane-checklist.md`. The AI Gateway boundary is
+tracked separately in `docs/ai-gateway-execution-checklist.md` and the detailed
+runtime implementation checklist in `docs/gateway-implementation-checklist.md`.
 
 ## Future control-plane responsibility
 
@@ -76,7 +78,7 @@ resolved credential strings such as `auth.apiKey`.
 
 ## Materialization boundary
 
-The intended lifecycle is:
+The configurator-service lifecycle is:
 
 ```text
 author -> validate -> approve/publish -> resolve secrets -> materialize Redis
@@ -106,7 +108,7 @@ The gateway does not currently consume these control-plane concerns directly:
 - multi-model fallback chains beyond the current runtime fallback model;
 - ownership, tenancy, environment, and administrative metadata.
 
-Those fields should remain in the control plane until the gateway has an
-explicit runtime adapter for them. Keeping this boundary prevents unused
-configuration from appearing supported while allowing the control plane to
-evolve independently.
+Those fields remain owned by the configurator service. The gateway should only
+consume fields that the configurator explicitly materializes into the runtime
+Redis contract. Keeping this boundary prevents unused configuration from
+appearing supported while allowing both services to evolve independently.

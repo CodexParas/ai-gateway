@@ -1,9 +1,10 @@
-# AI Gateway Control-Plane Checklist
+# Configurator Service Control-Plane Checklist
 
-This checklist tracks the future control plane described in
-`docs/ai-gateway-control-plane-model.md`. It is separate from the runtime
-gateway checklist because these capabilities require authoring, governance,
-secret-management, and configuration-materialization components.
+This checklist belongs to the separate configurator service. It tracks the
+control plane described in `docs/ai-gateway-control-plane-model.md`, including
+authoring, governance, secret management, and runtime configuration
+materialization. These capabilities are not responsibilities of the AI
+Gateway.
 
 Legend:
 
@@ -80,16 +81,15 @@ Legend:
 - [ ] Prevent cross-tenant model and credential reads.
 - [ ] Add metrics for materialization success, failure, age, and drift.
 
-## 7. Routing and policy enforcement
+## 7. Configurator-side policy preparation
 
 - [ ] Resolve aliases to concrete model records.
 - [ ] Apply weighted routing deterministically and observably.
-- [ ] Enforce enabled/disabled state at publication and request time.
-- [ ] Enforce per-model request, token, concurrency, and rate limits.
-- [ ] Apply timeout and retry policy from the control-plane record.
-- [ ] Apply retryable provider error policy.
-- [ ] Execute an ordered fallback chain with loop and scope protection.
-- [ ] Preserve the selected model and routing decision in audit events.
+- [ ] Publish only enabled models and valid routing targets.
+- [ ] Materialize request, timeout, retry, and limit settings for the gateway
+  runtime contract.
+- [ ] Materialize an ordered fallback chain with loop and scope protection.
+- [ ] Preserve routing and policy decisions in configurator audit events.
 
 ## 8. Observability and operations
 
@@ -98,7 +98,8 @@ Legend:
 - [ ] Add drift detection between the control-plane record and Redis materialization.
 - [ ] Add alerts for failed publication, stale configuration, and secret failures.
 - [ ] Apply payload logging and retention policy without exposing sensitive content.
-- [ ] Correlate control-plane changes with gateway request and execution logs.
+- [ ] Publish configuration identity so gateway request and execution logs can
+  correlate to the materialized version.
 - [ ] Provide an operator view of active models, versions, routes, and dependencies.
 
 ## 9. API and integration boundaries
@@ -121,13 +122,12 @@ Legend:
 - [ ] Test atomic publication and rollback behavior.
 - [ ] Test Redis outage, stale data, and reconciliation scenarios.
 - [ ] Test tenant and organization isolation.
-- [ ] Test end-to-end author → publish → materialize → gateway execution flow.
+- [ ] Test end-to-end author → publish → materialize flow.
 - [ ] Test audit completeness and sensitive-data exclusion.
 
-## Runtime boundary summary
+## Service boundary
 
-The current gateway consumes only the materialized runtime shape. The following
-control-plane fields are not gateway features until an explicit adapter exists:
+The configurator owns the following control-plane concerns:
 
 - `displayName`, `aliases`, and weighted routing;
 - `credentialRef` and secret rotation;
@@ -136,3 +136,8 @@ control-plane fields are not gateway features until an explicit adapter exists:
 - observability sampling and retention policy;
 - multi-model fallback references;
 - ownership, tenancy, environment, and administrative metadata.
+
+The configurator publishes only the runtime shape accepted by
+`ai-gateway-provider-config.schema.json`. The AI Gateway consumes that shape
+and performs request-time execution; it does not read configurator records or
+resolve control-plane secrets.
